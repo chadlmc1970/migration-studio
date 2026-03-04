@@ -2,6 +2,7 @@
 
 import zipfile
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 from bobj2sac.model.cim import CanonicalModel, SourceFile
 from bobj2sac.util.hashing import sha256_bytes
@@ -80,35 +81,108 @@ def extract_unx(input_path: Path, output_dir: Path, logger: ConversionLogger) ->
 
 def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLogger) -> None:
     """
-    Discover universe structure from extracted files.
-
-    This is a placeholder for actual UNX parsing logic.
-    Real implementation would parse XML/binary files within the archive.
+    Discover universe structure from extracted XML files.
+    Parses BOBJ universe XML to extract tables, joins, dimensions, and measures.
     """
-    logger.warn("UNX structure discovery not fully implemented - placeholder mode")
+    logger.log("Parsing universe XML structure...")
 
-    # Look for common UNX file patterns
+    # Find all XML files
     xml_files = list(raw_dir.rglob("*.xml"))
-    if xml_files:
-        logger.log(f"Found {len(xml_files)} XML files")
-        cim.metadata["xml_files"] = [str(f.relative_to(raw_dir)) for f in xml_files]
+    if not xml_files:
+        logger.warn("No XML files found in universe archive")
+        return
 
-    # Look for data foundation hints
+    logger.log(f"Found {len(xml_files)} XML file(s)")
+
+    # Parse each XML file
     for xml_file in xml_files:
-        name_lower = xml_file.name.lower()
-        if "datafoundation" in name_lower or "connection" in name_lower:
-            logger.log(f"Potential data foundation file: {xml_file.name}")
-            cim.data_foundation.raw_metadata[xml_file.name] = {
-                "path": str(xml_file.relative_to(raw_dir)),
-                "note": "TODO: parse this file for table/join definitions",
-            }
+        try:
+            tree = ET.parse(xml_file)
+            root = tree.getroot()
 
-        if "businesslayer" in name_lower or "dimension" in name_lower:
-            logger.log(f"Potential business layer file: {xml_file.name}")
-            cim.business_layer.raw_metadata[xml_file.name] = {
-                "path": str(xml_file.relative_to(raw_dir)),
-                "note": "TODO: parse this file for dimension/measure definitions",
-            }
+            # Remove namespace if present
+            if '}' in root.tag:
+                ns = root.tag.split('}')[0] + '}'
+            else:
+                ns = ''
 
-    # Placeholder object counts
-    logger.warn("Object counts are placeholders - full parsing not implemented")
+            logger.log(f"Parsing {xml_file.name}...")
+
+            # Extract DataFoundation - Tables
+            data_foundation = root.find(f'.//{ns}DataFoundation') or root.find('.//DataFoundation')
+            if data_foundation:
+                tables_node = data_foundation.find(f'.//{ns}Tables') or data_foundation.find('.//Tables')
+                if tables_node:
+                    for table in tables_node.findall(f'.//{ns}Table') or tables_node.findall('.//Table'):
+                        table_name = table.get('name') or table.get('alias', 'Unknown')
+                        if table_name and table_name not in cim.data_foundation.tables:
+                            cim.data_foundation.tables.append(table_name)
+                            logger.log(f"  Found table: {table_name}")
+
+                # Extract Joins
+                joins_node = data_foundation.find(f'.//{ns}Joins') or data_foundation.find('.//Joins')
+                if joins_node:
+                    for join in joins_node.findall(f'.//{ns}Join') or joins_node.findall('.//Join'):
+                        join_name = join.get('name', 'Unknown')
+                        left_table = None
+                        right_table = None
+                        condition = None
+
+                        left_node = join.find(f'.//{ns}LeftTable') or join.find('.//LeftTable')
+                        if left_node is not None and left_node.text:
+                            left_table = left_node.text
+
+                        right_node = join.find(f'.//{ns}RightTable') or join.find('.//RightTable')
+                        if right_node is not None and right_node.text:
+                            right_table = right_node.text
+
+                        cond_node = join.find(f'.//{ns}Condition') or join.find('.//Condition')
+                        if cond_node is not None and cond_node.text:
+                            condition = cond_node.text
+
+                        if left_table and right_table:
+                            join_info = {
+                                "name": join_name,
+                                "left_table": left_table,
+                                "right_table": right_table,
+                                "condition": condition or f"{left_table} = {right_table}"
+                            }
+                            cim.data_foundation.joins.append(join_info)
+                            logger.log(f"  Found join: {join_name} ({left_table} -> {right_table})")
+
+            # Extract BusinessLayer - Dimensions and Measures
+            business_layer = root.find(f'.//{ns}BusinessLayer') or root.find('.//BusinessLayer')
+            if business_layer:
+                # Extract Dimensions
+                for dimension in business_layer.findall(f'.//{ns}Dimension') or business_layer.findall('.//Dimension'):
+                    dim_name = dimension.get('name', 'Unknown')
+                    if dim_name and dim_name not in cim.business_layer.dimensions:
+                        cim.business_layer.dimensions.append(dim_name)
+                        logger.log(f"  Found dimension: {dim_name}")
+
+                # Extract Measures
+                for measure in business_layer.findall(f'.//{ns}Measure') or business_layer.findall('.//Measure'):
+                    measure_name = measure.get('name', 'Unknown')
+                    if measure_name and measure_name not in cim.business_layer.measures:
+                        cim.business_layer.measures.append(measure_name)
+                        logger.log(f"  Found measure: {measure_name}")
+
+                # Extract Filters
+                for filter_node in business_layer.findall(f'.//{ns}Filter') or business_layer.findall('.//Filter'):
+                    filter_name = filter_node.get('name', 'Unknown')
+                    if filter_name and filter_name not in cim.business_layer.filters:
+                        cim.business_layer.filters.append(filter_name)
+                        logger.log(f"  Found filter: {filter_name}")
+
+        except ET.ParseError as e:
+            logger.error(f"XML parse error in {xml_file.name}: {e}")
+        except Exception as e:
+            logger.error(f"Error processing {xml_file.name}: {e}")
+
+    # Log summary
+    logger.log(f"Parsing complete:")
+    logger.log(f"  Tables: {len(cim.data_foundation.tables)}")
+    logger.log(f"  Joins: {len(cim.data_foundation.joins)}")
+    logger.log(f"  Dimensions: {len(cim.business_layer.dimensions)}")
+    logger.log(f"  Measures: {len(cim.business_layer.measures)}")
+    logger.log(f"  Filters: {len(cim.business_layer.filters)}")
