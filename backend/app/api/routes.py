@@ -267,7 +267,7 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
 @router.get("/universes/{universe_id}/sac")
 async def get_sac_model(universe_id: str):
     """Get SAC model JSON for a universe"""
-    sac_model_path = TARGETS_DIR / universe_id / "sac" / "sac_model.json"
+    sac_model_path = TARGETS_DIR / universe_id / "sac" / "model.json"
 
     if not sac_model_path.exists():
         raise HTTPException(
