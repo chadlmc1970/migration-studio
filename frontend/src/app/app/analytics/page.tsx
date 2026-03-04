@@ -171,17 +171,17 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Pipeline Performance */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200 overflow-hidden">
           <h3 className="text-lg font-semibold text-slate-900 mb-6">Pipeline Performance</h3>
           <div className="space-y-6">
             {pipelinePerformance.map((stage, idx) => (
               <div key={idx}>
-                <div className="flex items-center justify-between mb-2">
-                  <div>
+                <div className="flex items-center justify-between gap-6 mb-2">
+                  <div className="flex items-baseline gap-2 flex-1 min-w-0">
                     <span className="text-sm font-medium text-slate-900">{stage.stage}</span>
-                    <span className="ml-2 text-xs text-slate-500">{stage.time}s avg</span>
+                    <span className="text-xs text-slate-500">{stage.time}s</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">{stage.success}%</span>
+                  <span className="text-sm font-semibold text-slate-900 flex-shrink-0">{stage.success}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
                   <div
