@@ -7,16 +7,16 @@ import json
 from typing import Optional
 from rich.console import Console
 
-from loaders.cim_loader import CIMLoader
-from loaders.target_loader import TargetLoader
-from validators.coverage_validator import CoverageValidator
-from validators.join_validator import JoinValidator
-from validators.semantic_validator import SemanticValidator
-from lineage.lineage_builder import LineageBuilder
-from lineage.graph_export import GraphExporter
-from reports.diff_report import DiffReportGenerator
-from reports.coverage_report import CoverageReportGenerator
-from pipeline_state import PipelineStateManager
+from validation_engine.loaders.cim_loader import CIMLoader
+from validation_engine.loaders.target_loader import TargetLoader
+from validation_engine.validators.coverage_validator import CoverageValidator
+from validation_engine.validators.join_validator import JoinValidator
+from validation_engine.validators.semantic_validator import SemanticValidator
+from validation_engine.lineage.lineage_builder import LineageBuilder
+from validation_engine.lineage.graph_export import GraphExporter
+from validation_engine.reports.diff_report import DiffReportGenerator
+from validation_engine.reports.coverage_report import CoverageReportGenerator
+from validation_engine.pipeline_state import PipelineStateManager
 
 
 class ValidationRunner:
