@@ -9,8 +9,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Universe Migration Studio API",
-    description="Backend API for Universe Migration Studio",
-    version="1.0.0"
+    description="Backend API for Universe Migration Studio - Integrated Pipeline",
+    version="1.1.0"
 )
 
 # Get frontend URL from environment or use defaults
@@ -38,8 +38,9 @@ app.include_router(router)
 async def root():
     return {
         "service": "Universe Migration Studio API",
-        "version": "1.0.0",
-        "status": "running"
+        "version": "1.1.0",
+        "status": "running",
+        "pipeline": "integrated"
     }
 
 @app.get("/health")
