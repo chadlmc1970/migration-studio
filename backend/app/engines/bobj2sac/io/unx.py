@@ -156,16 +156,86 @@ def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLo
                 # Extract Dimensions
                 for dimension in business_layer.findall(f'.//{ns}Dimension') or business_layer.findall('.//Dimension'):
                     dim_name = dimension.get('name', 'Unknown')
-                    if dim_name and dim_name not in cim.business_layer.dimensions:
-                        cim.business_layer.dimensions.append(dim_name)
-                        logger.log(f"  Found dimension: {dim_name}")
+
+                    # Extract expression to get table.column
+                    expr_node = dimension.find(f'.//{ns}Expression') or dimension.find('.//Expression')
+                    table_node = dimension.find(f'.//{ns}Table') or dimension.find('.//Table')
+
+                    table_name = None
+                    column_name = None
+
+                    # Try to get table from <Table> element
+                    if table_node is not None and table_node.text:
+                        table_name = table_node.text.strip()
+
+                    # Try to parse expression for table.column
+                    if expr_node is not None and expr_node.text:
+                        expr = expr_node.text.strip()
+                        # Handle expressions like "TABLE.COLUMN" or calculations
+                        if '.' in expr and not any(op in expr for op in ['(', '+', '-', '*', '/', 'CASE']):
+                            parts = expr.split('.', 1)
+                            if not table_name:
+                                table_name = parts[0].strip()
+                            column_name = parts[1].strip()
+                        else:
+                            # For calculated dimensions, use expression as column
+                            column_name = expr[:50]  # Truncate long expressions
+
+                    if dim_name:
+                        dim_obj = {
+                            "name": dim_name,
+                            "table": table_name or "Unknown",
+                            "column": column_name or dim_name
+                        }
+                        cim.business_layer.dimensions.append(dim_obj)
+                        logger.log(f"  Found dimension: {dim_name} ({table_name}.{column_name})")
 
                 # Extract Measures
                 for measure in business_layer.findall(f'.//{ns}Measure') or business_layer.findall('.//Measure'):
                     measure_name = measure.get('name', 'Unknown')
-                    if measure_name and measure_name not in cim.business_layer.measures:
-                        cim.business_layer.measures.append(measure_name)
-                        logger.log(f"  Found measure: {measure_name}")
+
+                    # Extract expression to get table.column
+                    expr_node = measure.find(f'.//{ns}Expression') or measure.find('.//Expression')
+                    table_node = measure.find(f'.//{ns}Table') or measure.find('.//Table')
+
+                    table_name = None
+                    column_name = None
+
+                    # Try to get table from <Table> element
+                    if table_node is not None and table_node.text:
+                        table_name = table_node.text.strip()
+
+                    # Try to parse expression for table.column
+                    if expr_node is not None and expr_node.text:
+                        expr = expr_node.text.strip()
+                        # Handle expressions like "TABLE.COLUMN" or calculations
+                        if '.' in expr and not any(op in expr for op in ['CASE', 'SUM', 'AVG', 'COUNT', 'MIN', 'MAX']):
+                            parts = expr.split('.', 1)
+                            if not table_name:
+                                table_name = parts[0].strip()
+                            # Remove any trailing parentheses or operators
+                            col = parts[1].strip()
+                            if ' ' in col:
+                                col = col.split()[0]
+                            column_name = col
+                        else:
+                            # For calculated measures, use first table.column reference
+                            if '.' in expr:
+                                import re
+                                match = re.search(r'(\w+)\.(\w+)', expr)
+                                if match:
+                                    if not table_name:
+                                        table_name = match.group(1)
+                                    column_name = match.group(2)
+
+                    if measure_name:
+                        measure_obj = {
+                            "name": measure_name,
+                            "table": table_name or "Unknown",
+                            "column": column_name or measure_name
+                        }
+                        cim.business_layer.measures.append(measure_obj)
+                        logger.log(f"  Found measure: {measure_name} ({table_name}.{column_name})")
 
                 # Extract Filters
                 for filter_node in business_layer.findall(f'.//{ns}Filter') or business_layer.findall('.//Filter'):
