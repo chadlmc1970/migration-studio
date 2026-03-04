@@ -9,21 +9,39 @@ export default function UniversesPage() {
   const [universes, setUniverses] = useState<UniverseInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadUniverses() {
-      try {
-        setLoading(true)
-        const data = await api.getUniverses()
-        setUniverses(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load universes')
-      } finally {
-        setLoading(false)
-      }
-    }
     loadUniverses()
   }, [])
+
+  async function loadUniverses() {
+    try {
+      setLoading(true)
+      const data = await api.getUniverses()
+      setUniverses(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load universes')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleDeleteUniverse(universeId: string) {
+    if (!confirm(`Delete universe "${universeId}" and all associated files?`)) {
+      return
+    }
+
+    try {
+      setDeletingId(universeId)
+      await api.deleteUniverse(universeId)
+      loadUniverses()
+    } catch (err) {
+      alert(`Failed to delete universe: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -55,7 +73,11 @@ export default function UniversesPage() {
         </div>
       </div>
 
-      <UniverseTable universes={universes} />
+      <UniverseTable
+        universes={universes}
+        onDelete={handleDeleteUniverse}
+        deletingId={deletingId}
+      />
     </div>
   )
 }

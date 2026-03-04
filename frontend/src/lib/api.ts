@@ -75,6 +75,12 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // Delete a universe and its associated files
+  deleteUniverse: (universeId: string) =>
+    fetchAPI<{ status: string; message: string }>(`/universes/${universeId}`, {
+      method: 'DELETE',
+    }),
+
   // Get download URL for artifact
   getDownloadUrl: (universeId: string, artifact: string) =>
     `${API_BASE}/universes/${universeId}/download?artifact=${artifact}`,

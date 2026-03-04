@@ -3,9 +3,11 @@ import UniverseRow from './UniverseRow'
 
 interface UniverseTableProps {
   universes: UniverseInfo[]
+  onDelete: (universeId: string) => void
+  deletingId: string | null
 }
 
-export default function UniverseTable({ universes }: UniverseTableProps) {
+export default function UniverseTable({ universes, onDelete, deletingId }: UniverseTableProps) {
   if (universes.length === 0) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
@@ -41,11 +43,19 @@ export default function UniverseTable({ universes }: UniverseTableProps) {
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">
               Last Updated
             </th>
+            <th scope="col" className="relative py-3.5 pl-3 pr-6">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
           {universes.map((universe) => (
-            <UniverseRow key={universe.id} universe={universe} />
+            <UniverseRow
+              key={universe.id}
+              universe={universe}
+              onDelete={onDelete}
+              isDeleting={deletingId === universe.id}
+            />
           ))}
         </tbody>
       </table>

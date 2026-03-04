@@ -466,32 +466,91 @@ async def delete_run(run_id: str, db: Session = Depends(get_db)):
     }
 
 
+@router.delete("/universes/{universe_id}")
+async def delete_universe(universe_id: str, db: Session = Depends(get_db)):
+    """Delete a universe and all its associated files"""
+
+    deleted_items = {
+        "universe_id": universe_id,
+        "universe_files": [],
+        "output_directories": []
+    }
+
+    # Delete universe source files (.unv/.unx) from input directory
+    for ext in ['.unv', '.unx']:
+        file_path = INPUT_DIR / f"{universe_id}{ext}"
+        if file_path.exists():
+            try:
+                file_path.unlink()
+                deleted_items["universe_files"].append(str(file_path))
+            except Exception as e:
+                print(f"Failed to delete {file_path}: {e}")
+
+    # Delete CIM file
+    cim_file = Path.home() / "pipeline" / "cim" / f"{universe_id}.cim.json"
+    if cim_file.exists():
+        try:
+            cim_file.unlink()
+            deleted_items["universe_files"].append(str(cim_file))
+        except Exception as e:
+            print(f"Failed to delete {cim_file}: {e}")
+
+    # Delete output directories (targets and validation)
+    target_dir = TARGETS_DIR / universe_id
+    if target_dir.exists():
+        try:
+            shutil.rmtree(target_dir)
+            deleted_items["output_directories"].append(str(target_dir))
+        except Exception as e:
+            print(f"Failed to delete {target_dir}: {e}")
+
+    validation_dir = VALIDATION_DIR / universe_id
+    if validation_dir.exists():
+        try:
+            shutil.rmtree(validation_dir)
+            deleted_items["output_directories"].append(str(validation_dir))
+        except Exception as e:
+            print(f"Failed to delete {validation_dir}: {e}")
+
+    # Delete from database
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if universe:
+        db.delete(universe)
+        db.commit()
+
+    return {
+        "status": "deleted",
+        "message": f"Universe {universe_id} and all associated files deleted successfully",
+        "deleted": deleted_items
+    }
+
+
 @router.post("/universes/{universe_id}/reprocess")
 async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     """Reset universe state and reprocess through pipeline"""
-    
+
     universe = db.query(Universe).filter(Universe.id == universe_id).first()
     if not universe:
         raise HTTPException(status_code=404, detail=f"Universe not found: {universe_id}")
-    
+
     # Reset universe state
     universe.parsed = False
     universe.transformed = False
     universe.validated = False
     universe.validated_at = None
     db.commit()
-    
+
     # Delete generated files to force regeneration
     import shutil
     cim_file = Path.home() / "pipeline" / "cim" / f"{universe_id}.cim.json"
     targets_dir = Path.home() / "pipeline" / "targets" / universe_id
     validation_dir = Path.home() / "pipeline" / "validation" / universe_id
-    
+
     if cim_file.exists():
         cim_file.unlink()
     if targets_dir.exists():
         shutil.rmtree(targets_dir)
     if validation_dir.exists():
         shutil.rmtree(validation_dir)
-    
+
     return {"status": "success", "message": f"Universe {universe_id} reset. Run pipeline to reprocess."}
