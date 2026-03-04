@@ -7,6 +7,7 @@ import type {
   KPIStats,
   UniverseReports,
   RunResponse,
+  RunRecord,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
@@ -66,7 +67,7 @@ export const api = {
   runPipeline: () => fetchAPI<RunResponse>('/run', { method: 'POST' }),
 
   // Get all runs
-  getRuns: (limit: number = 50) => fetchAPI<RunResponse[]>(`/runs?limit=${limit}`),
+  getRuns: (limit: number = 50) => fetchAPI<RunRecord[]>(`/runs?limit=${limit}`),
 
   // Delete a run and its associated files
   deleteRun: (runId: string) =>

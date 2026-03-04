@@ -76,3 +76,12 @@ export interface RunResponse {
   status: string
   message: string
 }
+
+export interface RunRecord {
+  run_id: string
+  status: string
+  started_at: string
+  completed_at?: string
+  duration_seconds?: number
+  universes_processed?: string[]
+}

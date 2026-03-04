@@ -2,28 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
-
-interface Run {
-  run_id: string
-  status: string
-  started_at: string
-  completed_at?: string
-  duration_seconds?: number
-  universes_processed?: string[]
-}
-
-interface UniverseInfo {
-  id: string
-  parsed: boolean
-  transformed: boolean
-  validated: boolean
-}
+import type { RunRecord, UniverseInfo } from '@/lib/types'
 
 export default function RunsPage() {
   const [running, setRunning] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [runs, setRuns] = useState<Run[]>([])
+  const [runs, setRuns] = useState<RunRecord[]>([])
   const [universes, setUniverses] = useState<UniverseInfo[]>([])
   const [loadingRuns, setLoadingRuns] = useState(true)
   const [loadingUniverses, setLoadingUniverses] = useState(true)
