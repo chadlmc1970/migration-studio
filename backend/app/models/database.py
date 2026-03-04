@@ -34,7 +34,7 @@ class Event(Base):
     level = Column(String(20), nullable=False)  # INFO, WARNING, ERROR
     message = Column(Text, nullable=False)
     universe_id = Column(String(255), ForeignKey("universes.id", ondelete="CASCADE"), nullable=True)
-    metadata = Column(JSONB, nullable=True)
+    extra_data = Column("metadata", JSONB, nullable=True)
 
     # Relationships
     universe = relationship("Universe", back_populates="events")
@@ -50,7 +50,7 @@ class Run(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
     universes_processed = Column(Integer, default=0)
-    metadata = Column(JSONB, nullable=True)
+    extra_data = Column("metadata", JSONB, nullable=True)
 
 
 class ValidationReport(Base):
