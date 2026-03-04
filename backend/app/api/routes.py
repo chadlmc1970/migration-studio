@@ -163,13 +163,19 @@ async def run_pipeline_endpoint():
 async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
     """Return JSON reports and available artifacts from validation and targets directories"""
 
-    validation_path = VALIDATION_DIR / universe_id
-
-    if not validation_path.exists():
+    # Check if universe exists in database
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
         raise HTTPException(
             status_code=404,
-            detail=f"Validation directory not found for universe: {universe_id}"
+            detail=f"Universe not found: {universe_id}"
         )
+
+    validation_path = VALIDATION_DIR / universe_id
+
+    # Create validation directory if it doesn't exist
+    if not validation_path.exists():
+        validation_path.mkdir(parents=True, exist_ok=True)
 
     # Read coverage_report.json
     coverage_report = None
