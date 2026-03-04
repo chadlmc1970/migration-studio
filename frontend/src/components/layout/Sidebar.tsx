@@ -8,9 +8,9 @@ export default function Sidebar() {
 
   const navigation = [
     { name: 'Dashboard', href: '/app', icon: DashboardIcon },
-    { name: 'Analytics', href: '/app/analytics', icon: AnalyticsIcon },
-    { name: 'Universes', href: '/app/universes', icon: UniversesIcon },
     { name: 'Runs', href: '/app/runs', icon: RunsIcon },
+    { name: 'Universes', href: '/app/universes', icon: UniversesIcon },
+    { name: 'Analytics', href: '/app/analytics', icon: AnalyticsIcon },
   ]
 
   return (
