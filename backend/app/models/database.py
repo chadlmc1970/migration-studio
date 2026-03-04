@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for Migration Studio database"""
-from sqlalchemy import Column, String, Boolean, Integer, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, JSONB
+from sqlalchemy import Column, String, Boolean, Integer, Text, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -15,9 +15,9 @@ class Universe(Base):
     parsed = Column(Boolean, default=False)
     transformed = Column(Boolean, default=False)
     validated = Column(Boolean, default=False)
-    validated_at = Column(TIMESTAMPTZ, nullable=True)
-    created_at = Column(TIMESTAMPTZ, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMPTZ, default=datetime.utcnow, onupdate=datetime.utcnow)
+    validated_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     events = relationship("Event", back_populates="universe", cascade="all, delete-orphan")
@@ -30,7 +30,7 @@ class Event(Base):
     __tablename__ = "events"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(TIMESTAMPTZ, default=datetime.utcnow)
+    timestamp = Column(DateTime(timezone=True), default=datetime.utcnow)
     level = Column(String(20), nullable=False)  # INFO, WARNING, ERROR
     message = Column(Text, nullable=False)
     universe_id = Column(String(255), ForeignKey("universes.id", ondelete="CASCADE"), nullable=True)
@@ -46,8 +46,8 @@ class Run(Base):
 
     id = Column(String(50), primary_key=True)
     status = Column(String(20), nullable=False)  # pending, running, completed, failed
-    started_at = Column(TIMESTAMPTZ, default=datetime.utcnow)
-    completed_at = Column(TIMESTAMPTZ, nullable=True)
+    started_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
     universes_processed = Column(Integer, default=0)
     metadata = Column(JSONB, nullable=True)
@@ -62,7 +62,7 @@ class ValidationReport(Base):
     coverage_report = Column(JSONB, nullable=True)
     semantic_diff = Column(JSONB, nullable=True)
     lineage_graph = Column(Text, nullable=True)
-    created_at = Column(TIMESTAMPTZ, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relationships
     universe = relationship("Universe", back_populates="validation_reports")
@@ -77,7 +77,7 @@ class Artifact(Base):
     artifact_type = Column(String(50), nullable=False)  # sac_model, datasphere_views, hana_schema, lineage_dot
     file_path = Column(Text, nullable=False)
     file_size = Column(Integer, nullable=True)
-    created_at = Column(TIMESTAMPTZ, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relationships
     universe = relationship("Universe", back_populates="artifacts")
