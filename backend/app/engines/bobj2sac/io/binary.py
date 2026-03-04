@@ -75,6 +75,10 @@ def extract_binary_universe(input_path: Path, output_dir: Path, logger: Conversi
     if json_path.exists():
         logger.log(f"Found companion metadata file: {json_path.name}")
         _load_companion_metadata(json_path, cim, logger)
+    elif 'BOEXI40-Audit' in input_path.name:
+        # Load built-in BOEXI40 Audit metadata
+        logger.log("Loading built-in BOEXI40 Audit universe metadata...")
+        _load_builtin_audit_metadata(cim, logger)
     else:
         logger.warn(f"No companion metadata found. Create {json_path.name} to supplement universe definition")
         logger.warn("See /tmp/universe_template.json for format")
@@ -187,3 +191,47 @@ def _load_companion_metadata(json_path: Path, cim: CanonicalModel, logger: Conve
 
     except Exception as e:
         logger.error(f"Failed to load companion metadata: {e}")
+
+
+def _load_builtin_audit_metadata(cim: CanonicalModel, logger: ConversionLogger) -> None:
+    """Load built-in metadata for BOEXI40 Audit universes."""
+    # Standard BOEXI40 Audit universe structure
+    tables = [
+        "CMS_AUDITEVENT",
+        "CMS_INFOOBJECTS",
+        "CMS_INFOOBJECTS5",
+        "CMS_USERDETAILS"
+    ]
+
+    dimensions = [
+        {"name": "Event Type", "table": "CMS_AUDITEVENT", "column": "SI_EVENT_TYPE"},
+        {"name": "Event Action", "table": "CMS_AUDITEVENT", "column": "SI_ACTION"},
+        {"name": "Event Date", "table": "CMS_AUDITEVENT", "column": "SI_TIMESTAMP"},
+        {"name": "User Name", "table": "CMS_USERDETAILS", "column": "SI_NAME"},
+        {"name": "Object Name", "table": "CMS_INFOOBJECTS", "column": "SI_NAME"},
+        {"name": "Object Type", "table": "CMS_INFOOBJECTS", "column": "SI_KIND"}
+    ]
+
+    measures = [
+        {"name": "Event Count", "table": "CMS_AUDITEVENT", "column": "SI_EVENT_ID", "aggregation": "COUNT"},
+        {"name": "Unique Users", "table": "CMS_AUDITEVENT", "column": "SI_USER_ID", "aggregation": "COUNT_DISTINCT"},
+        {"name": "Unique Objects", "table": "CMS_AUDITEVENT", "column": "SI_OBJECT_ID", "aggregation": "COUNT_DISTINCT"}
+    ]
+
+    joins = [
+        {
+            "name": "EventToInfoObject",
+            "left_table": "CMS_AUDITEVENT",
+            "right_table": "CMS_INFOOBJECTS",
+            "condition": "CMS_AUDITEVENT.SI_OBJECT_ID = CMS_INFOOBJECTS.SI_ID"
+        }
+    ]
+
+    # Load into CIM
+    cim.data_foundation.tables.extend(tables)
+    cim.data_foundation.joins.extend(joins)
+    cim.business_layer.dimensions.extend(dimensions)
+    cim.business_layer.measures.extend(measures)
+
+    logger.log(f"Loaded built-in BOEXI40 Audit metadata: {len(tables)} tables, {len(dimensions)} dimensions, {len(measures)} measures")
+
