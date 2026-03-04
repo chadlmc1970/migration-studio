@@ -346,3 +346,34 @@ async def get_run_logs(run_id: str):
         "run_id": run_id,
         "logs": logs
     }
+
+
+@router.post("/universes/{universe_id}/reprocess")
+async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
+    """Reset universe state and reprocess through pipeline"""
+    
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(status_code=404, detail=f"Universe not found: {universe_id}")
+    
+    # Reset universe state
+    universe.parsed = False
+    universe.transformed = False
+    universe.validated = False
+    universe.validated_at = None
+    db.commit()
+    
+    # Delete generated files to force regeneration
+    import shutil
+    cim_file = Path.home() / "pipeline" / "cim" / f"{universe_id}.cim.json"
+    targets_dir = Path.home() / "pipeline" / "targets" / universe_id
+    validation_dir = Path.home() / "pipeline" / "validation" / universe_id
+    
+    if cim_file.exists():
+        cim_file.unlink()
+    if targets_dir.exists():
+        shutil.rmtree(targets_dir)
+    if validation_dir.exists():
+        shutil.rmtree(validation_dir)
+    
+    return {"status": "success", "message": f"Universe {universe_id} reset. Run pipeline to reprocess."}
