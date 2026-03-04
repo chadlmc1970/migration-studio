@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "validation-engine"
+version = "1.0.0"
+description = "Validation and Lineage Engine for SAP Migration System"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.9.0",
+    "pydantic>=2.5.0",
+    "networkx>=3.2",
+    "sqlparse>=0.4.4",
+    "pytest>=7.4.3",
+    "rich>=13.7.0"
+]
+
+[project.scripts]
+validation-engine = "cli:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
