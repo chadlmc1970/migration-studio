@@ -129,6 +129,36 @@ async def upload_universe(file: UploadFile = File(...)):
     }
 
 
+@router.post("/upload/metadata")
+async def upload_metadata(file: UploadFile = File(...)):
+    """Upload companion .json metadata file for binary universes"""
+
+    if not file.filename.endswith('.json'):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .json files are allowed"
+        )
+
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = INPUT_DIR / file.filename
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save metadata file: {str(e)}"
+        )
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "path": str(file_path),
+        "message": "Companion metadata uploaded. Re-run pipeline to apply."
+    }
+
+
 @router.post("/run")
 async def run_pipeline_endpoint():
     """Run the full pipeline sequentially: Parser → Transform → Validation"""
