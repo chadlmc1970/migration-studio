@@ -246,22 +246,14 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
             except Exception:
                 pass
 
-    # Check available artifacts
-    targets_path = TARGETS_DIR / universe_id
-
+    # Check available artifacts based on database state (enterprise-ready, works in production)
+    # If transformed=True and validated=True in DB, artifacts exist (local filesystem or can be regenerated)
     available_artifacts = {
-        "sac_model": False,
-        "datasphere_views": False,
-        "hana_schema": False,
-        "lineage_dot": False
+        "sac_model": universe.transformed,
+        "datasphere_views": universe.transformed,
+        "hana_schema": universe.transformed,
+        "lineage_dot": universe.validated
     }
-
-    if targets_path.exists():
-        available_artifacts["sac_model"] = (targets_path / "sac" / "model.json").exists()
-        available_artifacts["datasphere_views"] = (targets_path / "datasphere" / "views.sql").exists()
-        available_artifacts["hana_schema"] = (targets_path / "hana" / "schema.sql").exists()
-
-    available_artifacts["lineage_dot"] = (validation_path / "lineage_graph.dot").exists()
 
     return {
         "universe_id": universe_id,
