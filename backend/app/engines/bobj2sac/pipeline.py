@@ -127,10 +127,12 @@ def _build_pipeline_cim(cim: Any) -> dict[str, Any]:
         ],
         "joins": cim.data_foundation.joins,
         "dimensions": [
-            {"name": dim} for dim in cim.business_layer.dimensions
+            dim if isinstance(dim, dict) else {"name": dim, "table": "Unknown", "column": dim}
+            for dim in cim.business_layer.dimensions
         ],
         "measures": [
-            {"name": measure} for measure in cim.business_layer.measures
+            measure if isinstance(measure, dict) else {"name": measure, "table": "Unknown", "column": measure}
+            for measure in cim.business_layer.measures
         ],
         "filters": [
             {"name": flt} for flt in cim.business_layer.filters
