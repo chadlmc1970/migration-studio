@@ -249,3 +249,25 @@ def get_run_logs(run_id: str) -> Dict[str, Optional[str]]:
             pass
 
     return result
+
+
+def delete_run(run_id: str) -> bool:
+    """
+    Delete a run record
+
+    Args:
+        run_id: Run identifier
+
+    Returns:
+        True if deleted, False if not found
+    """
+    run_file = RUNS_DIR / f"{run_id}.json"
+
+    if not run_file.exists():
+        return False
+
+    try:
+        run_file.unlink()
+        return True
+    except Exception:
+        return False

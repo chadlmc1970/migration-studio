@@ -65,6 +65,15 @@ export const api = {
   // Run migration pipeline
   runPipeline: () => fetchAPI<RunResponse>('/run', { method: 'POST' }),
 
+  // Get all runs
+  getRuns: (limit: number = 50) => fetchAPI<RunResponse[]>(`/runs?limit=${limit}`),
+
+  // Delete a run and its associated files
+  deleteRun: (runId: string) =>
+    fetchAPI<{ status: string; message: string }>(`/runs/${runId}`, {
+      method: 'DELETE',
+    }),
+
   // Get download URL for artifact
   getDownloadUrl: (universeId: string, artifact: string) =>
     `${API_BASE}/universes/${universeId}/download?artifact=${artifact}`,

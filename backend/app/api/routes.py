@@ -348,6 +348,73 @@ async def get_run_logs(run_id: str):
     }
 
 
+@router.delete("/runs/{run_id}")
+async def delete_run(run_id: str, db: Session = Depends(get_db)):
+    """Delete a run and optionally its universe files and outputs"""
+    run_record = runs.get_run_record(run_id)
+
+    if not run_record:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Run not found: {run_id}"
+        )
+
+    # Get universes processed in this run from metadata
+    metadata = run_record.get("metadata", {})
+    universes_processed = metadata.get("universes", [])
+
+    deleted_items = {
+        "run_record": run_id,
+        "universe_files": [],
+        "output_directories": []
+    }
+
+    # Delete universe source files (.unv/.unx) from input directory
+    for universe_id in universes_processed:
+        for ext in ['.unv', '.unx']:
+            file_path = INPUT_DIR / f"{universe_id}{ext}"
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    deleted_items["universe_files"].append(str(file_path))
+                except Exception as e:
+                    print(f"Failed to delete {file_path}: {e}")
+
+        # Delete output directories (targets and validation)
+        target_dir = TARGETS_DIR / universe_id
+        if target_dir.exists():
+            try:
+                shutil.rmtree(target_dir)
+                deleted_items["output_directories"].append(str(target_dir))
+            except Exception as e:
+                print(f"Failed to delete {target_dir}: {e}")
+
+        validation_dir = VALIDATION_DIR / universe_id
+        if validation_dir.exists():
+            try:
+                shutil.rmtree(validation_dir)
+                deleted_items["output_directories"].append(str(validation_dir))
+            except Exception as e:
+                print(f"Failed to delete {validation_dir}: {e}")
+
+        # Delete from database
+        universe = db.query(Universe).filter(Universe.id == universe_id).first()
+        if universe:
+            db.delete(universe)
+
+    # Delete run record from filesystem
+    runs.delete_run(run_id)
+
+    # Commit database changes
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "message": f"Run {run_id} and associated files deleted successfully",
+        "deleted": deleted_items
+    }
+
+
 @router.post("/universes/{universe_id}/reprocess")
 async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     """Reset universe state and reprocess through pipeline"""
