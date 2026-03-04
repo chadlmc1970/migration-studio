@@ -1,0 +1,179 @@
+"""
+Universe Migration Studio Backend API - Quick Reference
+
+Base URL: http://localhost:8000
+
+=============================================================================
+EXISTING ENDPOINTS
+=============================================================================
+
+GET /api/health
+  → Health check
+
+GET /api/state
+  → Returns pipeline_state.json content
+
+GET /api/universes
+  → Lists all universes with their status
+
+GET /api/events?limit=50
+  → Returns last N events from events.log
+
+=============================================================================
+NEW ENDPOINTS
+=============================================================================
+
+POST /api/upload
+  Body: multipart/form-data with "file" field (.unv or .unx)
+  → Uploads universe file to ~/pipeline/input/
+
+  Example:
+    curl -X POST http://localhost:8000/api/upload \
+      -F "file=@sales_universe.unv"
+
+  Response:
+    {
+      "status": "success",
+      "filename": "sales_universe.unv",
+      "path": "/Users/username/pipeline/input/sales_universe.unv"
+    }
+
+-----------------------------------------------------------------------------
+
+POST /api/run
+  → Runs full pipeline: Parser → Transform → Validation
+  → Each stage has 1-hour timeout
+  → Returns detailed results for each stage
+
+  Example:
+    curl -X POST http://localhost:8000/api/run
+
+  Success Response:
+    {
+      "status": "success",
+      "message": "Pipeline completed successfully",
+      "results": {
+        "parser": {
+          "status": "success",
+          "output": "...",
+          "error": ""
+        },
+        "transform": {
+          "status": "success",
+          "output": "...",
+          "error": ""
+        },
+        "validation": {
+          "status": "success",
+          "output": "...",
+          "error": ""
+        }
+      }
+    }
+
+  Failure Response (500):
+    {
+      "status": "failed",
+      "stage": "parser|transform|validation",
+      "results": { ... }
+    }
+
+-----------------------------------------------------------------------------
+
+GET /api/universes/{universe_id}/reports
+  → Returns JSON reports from ~/pipeline/validation/{universe_id}/
+  → Includes: coverage_report.json, semantic_diff.json, lineage_graph.json
+
+  Example:
+    curl http://localhost:8000/api/universes/sales_universe/reports
+
+  Response:
+    {
+      "coverage_report": { ... },
+      "semantic_diff": { ... },
+      "lineage_graph": { ... }
+    }
+
+  Note: Returns null for missing files, {"error": "..."} for read errors
+
+-----------------------------------------------------------------------------
+
+GET /api/universes/{universe_id}/download?artifact={relative_path}
+  → Downloads artifact from ~/pipeline/targets/{universe_id}/{artifact}
+  → Content-Type automatically detected (JSON, SQL, or octet-stream)
+
+  Examples:
+    # Download SAC model
+    curl "http://localhost:8000/api/universes/sales_universe/download?artifact=sac/model.json" \
+      -o model.json
+
+    # Download Datasphere views
+    curl "http://localhost:8000/api/universes/sales_universe/download?artifact=datasphere/views.sql" \
+      -o views.sql
+
+    # Download HANA schema
+    curl "http://localhost:8000/api/universes/sales_universe/download?artifact=hana/schema.sql" \
+      -o schema.sql
+
+  Response: File content with appropriate Content-Type header
+
+=============================================================================
+PIPELINE EXECUTION DETAILS
+=============================================================================
+
+POST /api/run executes in sequence:
+
+1. Parser Engine
+   Command: python -m bobj2sac.cli pipeline --root ~/pipeline
+   Reads: ~/pipeline/input/*.unv
+   Writes: ~/pipeline/cim/
+
+2. Transform Engine
+   Command: python -m cim_transform.cli run --pipeline-root ~/pipeline
+   Reads: ~/pipeline/cim/
+   Writes: ~/pipeline/targets/
+
+3. Validation Engine
+   Command: cd ~/validation_engine && python cli.py run
+   Reads: ~/pipeline/cim/ and ~/pipeline/targets/
+   Writes: ~/pipeline/validation/
+
+Each stage:
+  - Has subprocess timeout of 3600 seconds (1 hour)
+  - Captures stdout and stderr
+  - Stops pipeline on failure
+  - Uses subprocess.run(check=True)
+
+=============================================================================
+ERROR CODES
+=============================================================================
+
+200 - Success
+400 - Bad request (invalid file type, invalid artifact path)
+404 - Resource not found (universe, report, or artifact)
+500 - Pipeline execution failed (includes stage and error details)
+
+=============================================================================
+FILESYSTEM STRUCTURE
+=============================================================================
+
+~/pipeline/
+├── input/              # Upload target (POST /api/upload)
+├── cim/                # Parser output
+├── targets/            # Transform output (GET .../download)
+│   └── {universe_id}/
+│       ├── sac/model.json
+│       ├── datasphere/views.sql
+│       └── hana/schema.sql
+├── validation/         # Validation output (GET .../reports)
+│   └── {universe_id}/
+│       ├── coverage_report.json
+│       ├── semantic_diff.json
+│       └── lineage_graph.json
+├── state/
+│   └── pipeline_state.json
+└── events/
+    └── events.log
+
+=============================================================================
+"""
