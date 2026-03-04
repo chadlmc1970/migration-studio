@@ -103,18 +103,62 @@ export default function UniverseDetailPage({ params }: { params: { id: string } 
       )}
 
       {activeTab === 'downloads' && (
-        <div className="space-y-4">
-          {reports?.available_artifacts.sac_model && (
-            <DownloadLink universeId={params.id} artifact="sac/model.json" label="SAC Model (JSON)" />
-          )}
-          {reports?.available_artifacts.datasphere_views && (
-            <DownloadLink universeId={params.id} artifact="datasphere/views.sql" label="Datasphere Views (SQL)" />
-          )}
-          {reports?.available_artifacts.hana_schema && (
-            <DownloadLink universeId={params.id} artifact="hana/schema.sql" label="HANA Schema (SQL)" />
-          )}
-          {reports?.available_artifacts.lineage_dot && (
-            <DownloadLink universeId={params.id} artifact="lineage_graph.dot" label="Lineage Graph (DOT)" />
+        <div className="rounded-2xl bg-white border border-slate-200 p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Available Downloads</h3>
+            <p className="text-sm text-slate-600 mt-1">Download generated migration artifacts</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {reports?.available_artifacts.sac_model && (
+              <DownloadCard
+                universeId={params.id}
+                artifact="sac/model.json"
+                label="SAC Model"
+                description="Analytics Cloud model definition"
+                icon="sac"
+              />
+            )}
+            {reports?.available_artifacts.datasphere_views && (
+              <DownloadCard
+                universeId={params.id}
+                artifact="datasphere/views.sql"
+                label="Datasphere Views"
+                description="SQL view definitions"
+                icon="datasphere"
+              />
+            )}
+            {reports?.available_artifacts.hana_schema && (
+              <DownloadCard
+                universeId={params.id}
+                artifact="hana/schema.sql"
+                label="HANA Schema"
+                description="Database schema DDL"
+                icon="hana"
+              />
+            )}
+            {reports?.available_artifacts.lineage_dot && (
+              <DownloadCard
+                universeId={params.id}
+                artifact="lineage_graph.dot"
+                label="Lineage Graph"
+                description="Data lineage visualization"
+                icon="lineage"
+              />
+            )}
+          </div>
+
+          {!reports?.available_artifacts.sac_model &&
+           !reports?.available_artifacts.datasphere_views &&
+           !reports?.available_artifacts.hana_schema &&
+           !reports?.available_artifacts.lineage_dot && (
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3 3m0 0l-3-3m3 3V10" />
+              </svg>
+              <p className="mt-4 text-sm font-medium text-slate-900">No artifacts available</p>
+              <p className="mt-1 text-sm text-slate-500">Run the pipeline to generate downloadable files</p>
+            </div>
           )}
         </div>
       )}
@@ -122,19 +166,81 @@ export default function UniverseDetailPage({ params }: { params: { id: string } 
   )
 }
 
-function DownloadLink({ universeId, artifact, label }: { universeId: string; artifact: string; label: string }) {
+function DownloadCard({
+  universeId,
+  artifact,
+  label,
+  description,
+  icon,
+}: {
+  universeId: string
+  artifact: string
+  label: string
+  description: string
+  icon: 'sac' | 'datasphere' | 'hana' | 'lineage'
+}) {
   const downloadUrl = api.getDownloadUrl(universeId, artifact)
+
+  const iconColors = {
+    sac: 'bg-blue-100 text-blue-600',
+    datasphere: 'bg-purple-100 text-purple-600',
+    hana: 'bg-green-100 text-green-600',
+    lineage: 'bg-orange-100 text-orange-600',
+  }
+
+  const icons = {
+    sac: (
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+    datasphere: (
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+      </svg>
+    ),
+    hana: (
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+      </svg>
+    ),
+    lineage: (
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  }
 
   return (
     <a
       href={downloadUrl}
-      className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 hover:bg-slate-50"
       download
+      className="group relative flex items-start gap-4 rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-indigo-500 hover:shadow-lg"
     >
-      <span className="text-sm font-medium text-slate-900">{label}</span>
-      <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${iconColors[icon]}`}>
+        {icons[icon]}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h4 className="text-base font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+          {label}
+        </h4>
+        <p className="text-sm text-slate-600 mt-0.5">{description}</p>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download
+          </span>
+        </div>
+      </div>
+
+      <div className="shrink-0 text-slate-400 group-hover:text-indigo-500 transition-colors">
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
     </a>
   )
 }
