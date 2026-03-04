@@ -272,6 +272,27 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/universes/{universe_id}/sac")
+async def get_sac_model(universe_id: str):
+    """Get SAC model JSON for a universe"""
+    sac_model_path = TARGETS_DIR / universe_id / "sac" / "sac_model.json"
+
+    if not sac_model_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"SAC model not found for universe: {universe_id}"
+        )
+
+    try:
+        with open(sac_model_path) as f:
+            return json.load(f)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load SAC model: {str(e)}"
+        )
+
+
 @router.get("/universes/{universe_id}/download")
 async def download_universe_artifact(universe_id: str, artifact: str):
     """Serve artifact files from ~/pipeline/targets/{universe_id}/ or validation"""
