@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'export',  // Enable static export for Render
 
   // Disable webpack caching in dev to prevent corruption
   webpack: (config, { dev }) => {
