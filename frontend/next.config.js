@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',  // Enable static export for Render
+  // Don't use static export - use standalone server for dynamic routes
+  // output: 'export',
 
   // Disable webpack caching in dev to prevent corruption
   webpack: (config, { dev }) => {
