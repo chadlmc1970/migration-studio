@@ -2,9 +2,9 @@
 Test Coverage Validator
 """
 import pytest
-from loaders.cim_loader import CIMLoader
-from loaders.target_loader import Targets, SACModel
-from validators.coverage_validator import CoverageValidator
+from validation_engine.loaders.cim_loader import CIMLoader
+from validation_engine.loaders.target_loader import Targets, SACModel
+from validation_engine.validators.coverage_validator import CoverageValidator
 
 
 def test_coverage_validator_no_targets():

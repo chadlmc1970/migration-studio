@@ -2,8 +2,8 @@
 Semantic Validator - validates semantic preservation of dimensions and measures
 """
 from typing import Dict, Any, List, Optional
-from loaders.cim_loader import CIM
-from loaders.target_loader import Targets
+from validation_engine.loaders.cim_loader import CIM
+from validation_engine.loaders.target_loader import Targets
 
 
 class SemanticValidator:

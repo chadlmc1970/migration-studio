@@ -4,7 +4,7 @@ Test CIM Loader
 import json
 import pytest
 from pathlib import Path
-from loaders.cim_loader import CIMLoader, CIM
+from validation_engine.loaders.cim_loader import CIMLoader, CIM
 
 
 def test_cim_loader_basic():

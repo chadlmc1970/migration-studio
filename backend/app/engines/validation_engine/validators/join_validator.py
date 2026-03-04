@@ -2,8 +2,8 @@
 Join Validator - validates join graph preservation
 """
 from typing import Dict, Any, List, Optional, Set, Tuple
-from loaders.cim_loader import CIM, CIMJoin
-from loaders.target_loader import Targets
+from validation_engine.loaders.cim_loader import CIM, CIMJoin
+from validation_engine.loaders.target_loader import Targets
 
 
 class JoinValidator:

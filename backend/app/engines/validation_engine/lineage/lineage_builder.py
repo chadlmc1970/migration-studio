@@ -3,8 +3,8 @@ Lineage Builder - constructs lineage graphs from CIM and targets
 """
 from typing import Dict, Any, List, Set
 import networkx as nx
-from loaders.cim_loader import CIM
-from loaders.target_loader import Targets
+from validation_engine.loaders.cim_loader import CIM
+from validation_engine.loaders.target_loader import Targets
 
 
 class LineageGraph:

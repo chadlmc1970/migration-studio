@@ -2,9 +2,9 @@
 Test Lineage Builder
 """
 import pytest
-from loaders.cim_loader import CIMLoader
-from loaders.target_loader import Targets, SACModel
-from lineage.lineage_builder import LineageBuilder
+from validation_engine.loaders.cim_loader import CIMLoader
+from validation_engine.loaders.target_loader import Targets, SACModel
+from validation_engine.lineage.lineage_builder import LineageBuilder
 
 
 def test_lineage_builder_basic():

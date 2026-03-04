@@ -4,7 +4,7 @@ Graph Exporter - exports lineage graphs to various formats
 import json
 from pathlib import Path
 from typing import Dict, Any
-from lineage.lineage_builder import LineageGraph
+from validation_engine.lineage.lineage_builder import LineageGraph
 
 
 class GraphExporter:
