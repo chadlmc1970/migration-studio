@@ -42,11 +42,9 @@ def extract_binary_universe(input_path: Path, output_dir: Path, logger: Conversi
         data = f.read()
 
     source_file = SourceFile(
-        file_name=input_path.name,
-        file_type="unx_binary",
-        file_path=str(input_path),
-        file_size=len(data),
-        file_hash=sha256_bytes(data),
+        relative_path=input_path.name,
+        size_bytes=len(data),
+        sha256=sha256_bytes(data),
     )
 
     # Initialize CIM with defaults
