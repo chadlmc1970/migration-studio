@@ -35,3 +35,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# BOBJ SDK (large binary files)
+backend/app/engines/bobj2sac/sdk/BOBJ_SDK/

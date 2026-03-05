@@ -1,0 +1,38 @@
+name: Nightly Database Maintenance
+
+on:
+  schedule:
+    # Run at 2 AM UTC every night
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install sqlalchemy psycopg2-binary
+
+      - name: Run nightly maintenance
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          cd backend/scripts
+          python nightly_maintenance.py
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Nightly maintenance failed!"
+          echo "Check logs at https://github.com/${{ github.repository }}/actions"

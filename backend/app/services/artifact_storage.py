@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.database import Artifact
+from app.services.storage_controls import StorageControls
 import json
 import logging
 
@@ -59,7 +60,16 @@ class ArtifactStorage:
 
         Returns:
             Created/updated Artifact object
+
+        Raises:
+            ValueError: If artifact size exceeds limit
         """
+        # Validate artifact size
+        is_valid, error_msg = StorageControls.validate_artifact_size(content)
+        if not is_valid:
+            logger.error(f"Artifact size validation failed: {error_msg}")
+            raise ValueError(error_msg)
+
         # Check if artifact already exists
         existing = db.query(Artifact).filter_by(
             universe_id=universe_id,

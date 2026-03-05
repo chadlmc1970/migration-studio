@@ -8,6 +8,7 @@ from datetime import datetime
 from app.services.pipeline import run_pipeline
 from app.services import runs
 from app.services.artifact_storage import ArtifactStorage
+from app.services.storage_controls import StorageControls
 from app.database import get_db
 from app.models.database import Universe, Event, Run, ValidationReport, Artifact
 
@@ -495,3 +496,52 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
         shutil.rmtree(validation_dir)
 
     return {"status": "success", "message": f"Universe {universe_id} reset. Run pipeline to reprocess."}
+
+
+# ===== STORAGE CONTROL ENDPOINTS =====
+
+@router.get("/storage/stats")
+async def get_storage_stats(db: Session = Depends(get_db)):
+    """Get database storage statistics and usage metrics"""
+    return StorageControls.get_storage_stats(db)
+
+
+@router.get("/storage/largest")
+async def get_largest_artifacts(limit: int = 10, db: Session = Depends(get_db)):
+    """Get the largest artifacts for analysis"""
+    return StorageControls.get_largest_artifacts(db, limit)
+
+
+@router.post("/storage/cleanup")
+async def run_storage_cleanup(db: Session = Depends(get_db)):
+    """Run full storage cleanup (events, runs, old artifact versions, orphaned universes)"""
+    results = StorageControls.full_cleanup(db)
+
+    # Get updated stats after cleanup
+    stats = StorageControls.get_storage_stats(db)
+
+    return {
+        "cleanup_results": results,
+        "storage_stats": stats
+    }
+
+
+@router.post("/storage/cleanup/events")
+async def cleanup_old_events(days: int = 30, db: Session = Depends(get_db)):
+    """Delete events older than specified days"""
+    deleted = StorageControls.cleanup_old_events(db, days)
+    return {"status": "success", "deleted_count": deleted, "retention_days": days}
+
+
+@router.post("/storage/cleanup/runs")
+async def cleanup_old_runs(days: int = 90, db: Session = Depends(get_db)):
+    """Delete run records older than specified days"""
+    deleted = StorageControls.cleanup_old_runs(db, days)
+    return {"status": "success", "deleted_count": deleted, "retention_days": days}
+
+
+@router.post("/storage/cleanup/artifacts")
+async def cleanup_old_artifact_versions(keep_versions: int = 3, db: Session = Depends(get_db)):
+    """Keep only the latest N versions of each artifact"""
+    deleted = StorageControls.cleanup_old_artifact_versions(db, keep_versions)
+    return {"status": "success", "deleted_count": deleted, "versions_kept": keep_versions}
