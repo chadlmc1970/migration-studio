@@ -20,12 +20,13 @@ services:
     buildCommand: cd backend && pip install -r requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: DATABASE_URL
-        value: postgresql://neondb_owner:REPLACE_WITH_PASSWORD@ep-dark-hill-aiwdm4cf-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require
       - key: FRONTEND_URL
         value: https://migration-studio-pqor.onrender.com
       - key: ENVIRONMENT
         value: production
+      # Optional: Set DATABASE_URL in Render Dashboard to enable database features
+      # Format: postgresql://neondb_owner:PASSWORD@ep-dark-hill-aiwdm4cf-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require
       - key: ANTHROPIC_API_KEY
         sync: false  # Set in Render dashboard for AI enhancements
+
 
