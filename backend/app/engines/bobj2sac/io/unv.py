@@ -3,7 +3,7 @@
 from pathlib import Path
 import shutil
 
-from bobj2sac.model.cim import CanonicalModel, SourceFile, Table, Join, Dimension, Measure
+from bobj2sac.model.cim import CanonicalModel, SourceFile
 from bobj2sac.util.hashing import sha256_file
 from bobj2sac.util.logging import ConversionLogger
 
