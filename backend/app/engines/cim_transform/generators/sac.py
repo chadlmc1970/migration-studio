@@ -71,7 +71,7 @@ def generate_sac_model(cim: Dict[str, Any], output_dir: Path) -> Dict[str, Any]:
     artifacts_created = [str(model_file)]
 
     # Generate dimension hierarchy file (if hierarchies present)
-    hierarchies = _generate_hierarchies(business_layer)
+    hierarchies = _generate_hierarchies(cim)
     if hierarchies:
         hierarchy_file = sac_dir / "hierarchies.json"
         with open(hierarchy_file, 'w', encoding='utf-8') as f:
@@ -79,7 +79,7 @@ def generate_sac_model(cim: Dict[str, Any], output_dir: Path) -> Dict[str, Any]:
         artifacts_created.append(str(hierarchy_file))
 
     # Generate calculated members (if present)
-    calculated_members = _generate_calculated_members(business_layer)
+    calculated_members = _generate_calculated_members(cim)
     if calculated_members:
         calc_file = sac_dir / "calculated_members.json"
         with open(calc_file, 'w', encoding='utf-8') as f:
@@ -250,18 +250,70 @@ def _generate_relationships(data_foundation: Dict[str, Any]) -> List[Dict[str, A
     return relationships
 
 
-def _generate_hierarchies(business_layer: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate SAC hierarchies if present in CIM."""
-    # TODO: Extract hierarchy information from CIM
-    # Hierarchies may be in metadata or as special dimension types
-    return []
+def _generate_hierarchies(cim: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Generate SAC hierarchies from AI-detected hierarchies in CIM."""
+    # Check if AI enhancements are present at CIM root level
+    ai_enhancements = cim.get("ai_enhancements", {})
+    detected_hierarchies = ai_enhancements.get("detected_hierarchies", [])
+
+    if not detected_hierarchies:
+        return []
+
+    sac_hierarchies = []
+    for hierarchy in detected_hierarchies:
+        # Only include high-confidence hierarchies
+        if hierarchy.get("confidence", 0) < 0.7:
+            continue
+
+        sac_hierarchy = {
+            "hierarchyId": _sanitize_id(hierarchy.get("name", "unknown")),
+            "hierarchyName": hierarchy.get("name", "Unknown Hierarchy"),
+            "hierarchyType": hierarchy.get("type", "Custom"),  # Time, Geography, Organization, Product
+            "levels": [
+                {
+                    "levelId": _sanitize_id(level.get("dimension", "unknown")),
+                    "levelName": level.get("dimension", "Unknown"),
+                    "order": level.get("order", 0)
+                }
+                for level in hierarchy.get("levels", [])
+            ],
+            "confidence": hierarchy.get("confidence", 0.0),
+            "warnings": hierarchy.get("warnings", [])
+        }
+
+        sac_hierarchies.append(sac_hierarchy)
+
+    return sac_hierarchies
 
 
-def _generate_calculated_members(business_layer: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate SAC calculated members from CIM formulas."""
-    # TODO: Extract calculated members/formulas from CIM
-    # May be in metadata or as special measure types
-    return []
+def _generate_calculated_members(cim: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Generate SAC calculated members from AI-translated formulas in CIM."""
+    # Check if AI enhancements are present at CIM root level
+    ai_enhancements = cim.get("ai_enhancements", {})
+    translated_formulas = ai_enhancements.get("translated_formulas", {})
+
+    if not translated_formulas:
+        return []
+
+    calculated_members = []
+    for formula_name, formula_data in translated_formulas.items():
+        # Only include high-confidence translations
+        if formula_data.get("confidence", 0) < 0.7:
+            continue
+
+        calculated_member = {
+            "calculatedMemberId": _sanitize_id(formula_name),
+            "calculatedMemberName": formula_name,
+            "formula": formula_data.get("translated", ""),
+            "originalFormula": formula_data.get("original", ""),
+            "description": formula_data.get("explanation", ""),
+            "confidence": formula_data.get("confidence", 0.0),
+            "warnings": formula_data.get("warnings", [])
+        }
+
+        calculated_members.append(calculated_member)
+
+    return calculated_members
 
 
 def _map_dimension_type(data_type: str) -> str:
