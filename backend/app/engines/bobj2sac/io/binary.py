@@ -13,15 +13,23 @@ from bobj2sac.model.cim import CanonicalModel, SourceFile
 from bobj2sac.util.hashing import sha256_bytes
 from bobj2sac.util.logging import ConversionLogger
 
+# Import SDK bridge
+try:
+    from ..sdk_bridge import BOBJSDKBridge, UNVParser
+    SDK_AVAILABLE = True
+except ImportError:
+    SDK_AVAILABLE = False
+
 
 def extract_binary_universe(input_path: Path, output_dir: Path, logger: ConversionLogger) -> CanonicalModel:
     """
     Extract metadata from binary .unx universe files.
 
     Strategy:
-    1. Extract Properties file for basic metadata
-    2. Look for companion .json metadata file (manual supplement)
-    3. Create minimal CIM with available info
+    1. Try SAP SDK parser first (if available)
+    2. Fall back to Properties file extraction
+    3. Look for companion .json metadata file (manual supplement)
+    4. Use built-in metadata for known universe types
 
     Args:
         input_path: Path to .unx file
@@ -32,10 +40,6 @@ def extract_binary_universe(input_path: Path, output_dir: Path, logger: Conversi
         CanonicalModel with extracted metadata
     """
     logger.log(f"Extracting binary universe: {input_path}")
-
-    # Create raw directory
-    raw_dir = output_dir / "raw" / "binary_extract"
-    raw_dir.mkdir(parents=True, exist_ok=True)
 
     # Read source file
     with open(input_path, "rb") as f:
@@ -55,7 +59,29 @@ def extract_binary_universe(input_path: Path, output_dir: Path, logger: Conversi
         source_files=[source_file],
     )
 
-    # Extract .unx archive
+    # Try SDK-based extraction first
+    if SDK_AVAILABLE:
+        try:
+            logger.log("Using SAP BusinessObjects SDK for UNX parsing")
+            parser = UNVParser()
+            cim_data = parser.parse_universe(input_path)
+            _populate_cim_from_sdk(cim, cim_data, logger)
+
+            cim.update_counts()
+            logger.log(f"SDK extraction complete: {len(cim.data_foundation.tables)} tables, "
+                      f"{len(cim.business_layer.dimensions)} dimensions, "
+                      f"{len(cim.business_layer.measures)} measures")
+            return cim
+
+        except Exception as e:
+            logger.warn(f"SDK parsing failed: {e} - falling back to manual extraction")
+    else:
+        logger.warn("SAP SDK not available - using fallback extraction methods")
+
+    # Fallback: Extract archive and parse Properties
+    raw_dir = output_dir / "raw" / "binary_extract"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
     try:
         with zipfile.ZipFile(input_path, "r") as zf:
             logger.log(f"Extracting {len(zf.namelist())} files from archive")
@@ -232,4 +258,77 @@ def _load_builtin_audit_metadata(cim: CanonicalModel, logger: ConversionLogger) 
     cim.business_layer.measures.extend(measures)
 
     logger.log(f"Loaded built-in BOEXI40 Audit metadata: {len(tables)} tables, {len(dimensions)} dimensions, {len(measures)} measures")
+
+
+def _populate_cim_from_sdk(cim: CanonicalModel, cim_data: dict, logger: ConversionLogger):
+    """Populate CanonicalModel from SDK-extracted data"""
+
+    # Update universe metadata
+    if 'universe' in cim_data:
+        universe_meta = cim_data['universe']
+        cim.universe_name = universe_meta.get('name', cim.universe_name)
+        if 'description' in universe_meta:
+            cim.metadata['description'] = universe_meta['description']
+        if 'version' in universe_meta:
+            cim.metadata['version'] = universe_meta['version']
+
+    # Load tables
+    if 'tables' in cim_data:
+        for table in cim_data['tables']:
+            table_name = table.get('name')
+            if table_name:
+                cim.data_foundation.tables.append(table_name)
+                if table.get('sql'):
+                    cim.metadata.setdefault('table_sql', {})[table_name] = table['sql']
+        logger.log(f"  Loaded {len(cim_data['tables'])} tables from SDK")
+
+    # Load joins
+    if 'joins' in cim_data:
+        for join in cim_data['joins']:
+            cim.data_foundation.joins.append({
+                "name": f"{join['left_table']}_to_{join['right_table']}",
+                "left_table": join['left_table'],
+                "right_table": join['right_table'],
+                "condition": join['condition']
+            })
+        logger.log(f"  Loaded {len(cim_data['joins'])} joins from SDK")
+
+    # Load dimensions
+    if 'dimensions' in cim_data:
+        for dim in cim_data['dimensions']:
+            cim.business_layer.dimensions.append({
+                "name": dim['name'],
+                "table": dim.get('table', 'Unknown'),
+                "column": dim.get('column', dim['name']),
+                "description": dim.get('description', '')
+            })
+        logger.log(f"  Loaded {len(cim_data['dimensions'])} dimensions from SDK")
+
+    # Load measures
+    if 'measures' in cim_data:
+        for measure in cim_data['measures']:
+            cim.business_layer.measures.append({
+                "name": measure['name'],
+                "table": measure.get('table', 'Unknown'),
+                "column": measure.get('column', measure['name']),
+                "aggregation": measure.get('aggregation', 'SUM'),
+                "formula": measure.get('formula')
+            })
+        logger.log(f"  Loaded {len(cim_data['measures'])} measures from SDK")
+
+    # Load contexts (BOBJ-specific)
+    if 'contexts' in cim_data and cim_data['contexts']:
+        cim.metadata['contexts'] = cim_data['contexts']
+        logger.log(f"  Loaded {len(cim_data['contexts'])} contexts from SDK")
+
+    # Load prompts/LOVs
+    if 'prompts' in cim_data and cim_data['prompts']:
+        cim.metadata['prompts'] = cim_data['prompts']
+        logger.log(f"  Loaded {len(cim_data['prompts'])} prompts from SDK")
+
+    # Load connection info
+    if 'connection' in cim_data and cim_data['connection']:
+        cim.metadata['connection'] = cim_data['connection']
+
+    logger.log("SDK data successfully populated into CIM")
 
