@@ -1,7 +1,7 @@
 """Database configuration and session management for PostgreSQL"""
 import os
 import sys
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -42,7 +42,7 @@ def init_database():
 
         # Test connection
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
 
         # Session factory
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
