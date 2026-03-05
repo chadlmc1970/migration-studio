@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Migration Studio - API Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        .test { margin: 10px 0; padding: 15px; background: white; border-radius: 5px; }
+        .success { border-left: 4px solid #22c55e; }
+        .error { border-left: 4px solid #ef4444; }
+        .pending { border-left: 4px solid #eab308; }
+        pre { background: #f9f9f9; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Migration Studio API Debug</h1>
+
+    <div class="test pending" id="config">
+        <h3>1. Frontend Configuration</h3>
+        <pre id="config-result">Checking...</pre>
+    </div>
+
+    <div class="test pending" id="health">
+        <h3>2. API Health Check</h3>
+        <pre id="health-result">Testing...</pre>
+    </div>
+
+    <div class="test pending" id="universes">
+        <h3>3. Universes Endpoint</h3>
+        <pre id="universes-result">Testing...</pre>
+    </div>
+
+    <div class="test pending" id="cors">
+        <h3>4. CORS Check</h3>
+        <pre id="cors-result">Testing...</pre>
+    </div>
+
+    <button onclick="location.reload()">🔄 Retest</button>
+    <button onclick="location.href='https://migration-studio-pqor.onrender.com'">← Back to App</button>
+
+    <script>
+        const API_URL = 'https://migration-studio-api.onrender.com/api';
+
+        // 1. Show configuration
+        document.getElementById('config-result').textContent =
+            `API Base URL: ${API_URL}\n` +
+            `Current Origin: ${window.location.origin}\n` +
+            `Build: ${new Date().toISOString()}`;
+        document.getElementById('config').className = 'test success';
+
+        // 2. Test health endpoint
+        fetch('https://migration-studio-api.onrender.com/health')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('health-result').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('health').className = 'test success';
+            })
+            .catch(err => {
+                document.getElementById('health-result').textContent = `❌ Error: ${err.message}`;
+                document.getElementById('health').className = 'test error';
+            });
+
+        // 3. Test universes endpoint
+        fetch(`${API_URL}/universes`)
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
+                document.getElementById('universes-result').textContent =
+                    `✅ Success! Found ${data.length} universes:\n\n` +
+                    JSON.stringify(data, null, 2);
+                document.getElementById('universes').className = 'test success';
+            })
+            .catch(err => {
+                document.getElementById('universes-result').textContent =
+                    `❌ Error: ${err.message}\n\n` +
+                    `This is the error your app is seeing!\n\n` +
+                    `Possible causes:\n` +
+                    `1. CORS blocking the request\n` +
+                    `2. Network error\n` +
+                    `3. API endpoint not reachable`;
+                document.getElementById('universes').className = 'test error';
+            });
+
+        // 4. Check CORS headers
+        fetch(`${API_URL}/universes`, {method: 'OPTIONS'})
+            .then(r => {
+                const headers = {};
+                r.headers.forEach((value, key) => {
+                    if (key.toLowerCase().includes('access-control')) {
+                        headers[key] = value;
+                    }
+                });
+                document.getElementById('cors-result').textContent =
+                    `CORS Headers:\n${JSON.stringify(headers, null, 2)}`;
+                document.getElementById('cors').className = 'test success';
+            })
+            .catch(err => {
+                document.getElementById('cors-result').textContent = `❌ Error: ${err.message}`;
+                document.getElementById('cors').className = 'test error';
+            });
+    </script>
+</body>
+</html>
