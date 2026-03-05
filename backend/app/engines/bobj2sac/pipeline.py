@@ -44,8 +44,8 @@ def process_pipeline(
         "total": 0,
     }
 
-    # Scan for universe files
-    universe_files = list(input_dir.glob("*.unx")) + list(input_dir.glob("*.unv"))
+    # Scan for universe files (including subdirectories)
+    universe_files = list(input_dir.glob("**/*.unx")) + list(input_dir.glob("**/*.unv"))
 
     if not universe_files:
         return {
