@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import router
 from app.database import engine, Base, is_db_available
 import os
+
+# Import routes
+if is_db_available():
+    from app.api.routes import router
+    print("✅ Using database-backed routes")
+else:
+    from app.api.routes_no_db import router_no_db as router
+    print("⚠️  Using mock data routes (set DATABASE_URL for persistence)")
 
 # Create database tables on startup (only if DB is available)
 if engine is not None:

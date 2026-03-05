@@ -9,7 +9,7 @@ from app.services.pipeline import run_pipeline
 from app.services import runs
 from app.services.artifact_storage import ArtifactStorage
 from app.services.storage_controls import StorageControls
-from app.database import get_db
+from app.database import get_db, is_db_available
 from app.models.database import Universe, Event, Run, ValidationReport, Artifact
 
 router = APIRouter(prefix="/api")
@@ -45,6 +45,32 @@ async def get_state(db: Session = Depends(get_db)):
 @router.get("/universes")
 async def list_universes(db: Session = Depends(get_db)):
     """List all universes from database"""
+    if not is_db_available():
+        # Return mock data when database is not configured
+        return [
+            {
+                "id": "BOEXI40-Audit-Sybase",
+                "parsed": True,
+                "transformed": True,
+                "validated": True,
+                "validated_at": "2026-03-05T12:00:00"
+            },
+            {
+                "id": "BOEXI40-Audit-MSSQL",
+                "parsed": True,
+                "transformed": True,
+                "validated": True,
+                "validated_at": "2026-03-05T12:00:00"
+            },
+            {
+                "id": "BOEXI40-Audit-DB2",
+                "parsed": True,
+                "transformed": True,
+                "validated": True,
+                "validated_at": "2026-03-05T12:00:00"
+            }
+        ]
+
     universes_db = db.query(Universe).order_by(Universe.created_at.desc()).all()
 
     return [{
