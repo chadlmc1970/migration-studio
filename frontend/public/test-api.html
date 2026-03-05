@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Migration Studio - Real Error Detector</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test { margin: 10px 0; padding: 15px; background: #2a2a2a; border-radius: 5px; }
+        .success { border-left: 4px solid #22c55e; }
+        .error { border-left: 4px solid #ef4444; }
+        pre { background: #000; padding: 10px; overflow-x: auto; color: #0f0; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 What's REALLY Happening?</h1>
+
+    <div class="test" id="result">
+        <h3>Testing API Call</h3>
+        <pre id="output">Running test...</pre>
+    </div>
+
+    <button onclick="location.reload()">🔄 Retry</button>
+    <button onclick="clearAndRetry()">🗑️ Clear Cache & Retry</button>
+
+    <script>
+        const API_URL = 'https://migration-studio-api.onrender.com/api';
+
+        async function test() {
+            const output = document.getElementById('output');
+            const result = document.getElementById('result');
+
+            try {
+                output.textContent = '1. Fetching from: ' + API_URL + '/universes\\n\\n';
+
+                const response = await fetch(`${API_URL}/universes`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                output.textContent += `2. Response Status: ${response.status} ${response.statusText}\\n\\n`;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                output.textContent += `3. Success! Received ${data.length} universes:\\n\\n`;
+                output.textContent += JSON.stringify(data, null, 2);
+
+                result.className = 'test success';
+
+            } catch (err) {
+                output.textContent += `\\n❌ ERROR: ${err.message}\\n\\n`;
+                output.textContent += `Error name: ${err.name}\\n`;
+                output.textContent += `Error stack: ${err.stack}\\n\\n`;
+                output.textContent += `This is the EXACT error your app is seeing!`;
+                result.className = 'test error';
+            }
+        }
+
+        function clearAndRetry() {
+            // Clear all caches
+            if ('caches' in window) {
+                caches.keys().then(keys => {
+                    keys.forEach(key => caches.delete(key));
+                });
+            }
+            // Force reload without cache
+            location.reload(true);
+        }
+
+        // Run test on load
+        test();
+    </script>
+</body>
+</html>
