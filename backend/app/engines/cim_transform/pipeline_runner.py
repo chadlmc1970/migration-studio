@@ -92,12 +92,17 @@ class PipelineRunner:
         ai_enhancements_data = None
         if AI_ENABLED:
             try:
+                import os
                 print("🧠 Running AI semantic enhancement...")
+                print(f"   AI_ENABLED={AI_ENABLED}, ANTHROPIC_API_KEY length={len(os.getenv('ANTHROPIC_API_KEY', ''))}")
                 enhancer = SemanticEnhancer()
+                print(f"   SemanticEnhancer initialized: {enhancer is not None}")
 
                 # Convert CIM to dict for enhancement
                 cim_dict = cim.model_dump() if hasattr(cim, 'model_dump') else cim.dict()
+                print(f"   CIM dict prepared, dimensions={len(cim_dict.get('business_layer', {}).get('dimensions', []))}")
                 enhanced_dict = enhancer.enhance_cim(cim_dict)
+                print(f"   AI enhancement method called, result type={type(enhanced_dict)}")
 
                 # Extract enhancement results
                 if enhanced_dict.get("ai_enhancements"):
@@ -117,9 +122,14 @@ class PipelineRunner:
 
                     # Capture AI data for database persistence
                     ai_enhancements_data = ai
+                else:
+                    print(f"⚠️  No ai_enhancements in enhanced_dict. Keys: {list(enhanced_dict.keys())}")
 
             except Exception as e:
                 print(f"⚠️  AI enhancement failed (non-critical): {e}")
+                print(f"   Exception type: {type(e).__name__}")
+                import traceback
+                traceback.print_exc()
                 print("   Continuing with basic transformation...")
         else:
             print("ℹ️  AI enhancement disabled")
