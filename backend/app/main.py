@@ -46,3 +46,4 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+# Force rebuild Thu Mar  5 06:57:24 CST 2026
