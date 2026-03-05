@@ -1,0 +1,3 @@
+# SAP BusinessObjects SDK - Too large for Git (1.6GB)
+# Deploy separately to Render via upload or volume mount
+BOBJ_SDK/
