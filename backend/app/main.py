@@ -35,8 +35,10 @@ allowed_origins = [
     "https://migration-studio-api.onrender.com"  # API itself for health checks
 ]
 
-# Remove duplicates
-allowed_origins = list(set(allowed_origins))
+# Remove duplicates and filter out None
+allowed_origins = list(set([o for o in allowed_origins if o]))
+
+print(f"🔒 CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +46,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 app.include_router(router)
