@@ -5,6 +5,8 @@ from .graph import SemanticGraph
 from .generators import generate_sac_model, generate_datasphere_views, generate_hana_schema
 from .logging import TransformReport
 from .state_manager import PipelineState, EventLogger
+from app.config import AI_ENABLED
+from .ai.semantic_enhancer import SemanticEnhancer
 
 
 class PipelineRunner:
@@ -85,6 +87,39 @@ class PipelineRunner:
         print("📥 Loading CIM...")
         cim = load_cim(cim_file)
         print(f"✓ Loaded universe: {cim.universe.name} (id: {cim.universe.id})")
+
+        # === AI SEMANTIC ENHANCEMENT ===
+        if AI_ENABLED:
+            try:
+                print("🧠 Running AI semantic enhancement...")
+                enhancer = SemanticEnhancer()
+
+                # Convert CIM to dict for enhancement
+                cim_dict = cim.model_dump() if hasattr(cim, 'model_dump') else cim.dict()
+                enhanced_dict = enhancer.enhance_cim(cim_dict)
+
+                # Extract enhancement results
+                if enhanced_dict.get("ai_enhancements"):
+                    ai = enhanced_dict["ai_enhancements"]
+                    hierarchies = len(ai.get("detected_hierarchies", []))
+                    formulas = len(ai.get("translated_formulas", {}))
+                    classifications = len(ai.get("dimension_classifications", {}))
+
+                    print(f"✓ AI enhancement complete:")
+                    print(f"   - {classifications} dimension(s) classified")
+                    print(f"   - {hierarchies} hierarchy(ies) detected")
+                    print(f"   - {formulas} formula(s) translated")
+
+                    # Store enhancements back in CIM
+                    if not hasattr(cim, 'ai_enhancements'):
+                        cim.ai_enhancements = ai
+
+            except Exception as e:
+                print(f"⚠️  AI enhancement failed (non-critical): {e}")
+                print("   Continuing with basic transformation...")
+        else:
+            print("ℹ️  AI enhancement disabled")
+        # === END AI ENHANCEMENT ===
 
         # Log transformation start
         self.event_logger.log_event("transform_started", cim.universe.id)
