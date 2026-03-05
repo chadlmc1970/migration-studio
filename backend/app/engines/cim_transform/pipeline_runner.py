@@ -116,10 +116,6 @@ class PipelineRunner:
                     print(f"   - {hierarchies} hierarchy(ies) detected")
                     print(f"   - {formulas} formula(s) translated")
 
-                    # Store enhancements back in CIM
-                    if not hasattr(cim, 'ai_enhancements'):
-                        cim.ai_enhancements = ai
-
                     # Capture AI data for database persistence
                     ai_enhancements_data = ai
                 else:

@@ -27,8 +27,8 @@ class DataFoundation(BaseModel):
 class BusinessLayer(BaseModel):
     """Placeholder for business layer objects."""
 
-    dimensions: list[str] = Field(default_factory=list, description="Dimension names")
-    measures: list[str] = Field(default_factory=list, description="Measure names")
+    dimensions: list[dict[str, Any]] = Field(default_factory=list, description="Dimension objects with name, table, column")
+    measures: list[dict[str, Any]] = Field(default_factory=list, description="Measure objects with name, table, column")
     filters: list[str] = Field(default_factory=list, description="Filter names")
     raw_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Raw unparsed metadata"
