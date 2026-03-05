@@ -4,6 +4,11 @@ const nextConfig = {
   // Don't use static export - use standalone server for dynamic routes
   // output: 'export',
 
+  // Explicitly expose environment variables at build time
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://migration-studio-api.onrender.com/api',
+  },
+
   // Disable webpack caching in dev to prevent corruption
   webpack: (config, { dev }) => {
     if (dev) {
