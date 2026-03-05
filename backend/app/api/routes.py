@@ -644,6 +644,14 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     universe.transformed = False
     universe.validated = False
     universe.validated_at = None
+    universe.ai_enhanced = False
+    universe.ai_enhancements = None
+    universe.ai_processed_at = None
+    universe.ai_enhancement_summary = None
+
+    # Delete all artifacts from database
+    db.query(Artifact).filter(Artifact.universe_id == universe_id).delete()
+
     db.commit()
 
     # Delete generated files to force regeneration
