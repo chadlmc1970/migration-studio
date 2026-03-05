@@ -129,7 +129,7 @@ async def get_events(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.post("/upload")
-async def upload_universe(file: UploadFile = File(...)):
+async def upload_universe(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload .unv or .unx files directly to ~/pipeline/input/"""
 
     if not (file.filename.endswith('.unv') or file.filename.endswith('.unx')):
@@ -150,10 +150,35 @@ async def upload_universe(file: UploadFile = File(...)):
             detail=f"Failed to save file: {str(e)}"
         )
 
+    # Extract universe ID from filename (remove .unv or .unx extension)
+    universe_id = file.filename.replace('.unv', '').replace('.unx', '')
+
+    # Create database record if it doesn't exist
+    existing = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not existing:
+        new_universe = Universe(
+            id=universe_id,
+            parsed=False,
+            transformed=False,
+            validated=False
+        )
+        db.add(new_universe)
+        db.commit()
+
+        # Log event
+        event = Event(
+            level="INFO",
+            message=f"Universe file uploaded: {file.filename}",
+            universe_id=universe_id
+        )
+        db.add(event)
+        db.commit()
+
     return {
         "status": "success",
         "filename": file.filename,
-        "path": str(file_path)
+        "path": str(file_path),
+        "universe_id": universe_id
     }
 
 
