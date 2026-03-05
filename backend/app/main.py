@@ -18,7 +18,9 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3001")
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    FRONTEND_URL
+    FRONTEND_URL,
+    "https://migration-studio-pqor.onrender.com",  # Actual deployed frontend
+    "https://migration-studio-frontend.onrender.com"  # Future separate service
 ]
 
 # Remove duplicates
