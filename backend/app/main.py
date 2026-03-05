@@ -69,3 +69,4 @@ async def health():
         "database": "connected" if is_db_available() else "not_configured"
     }
 # Force rebuild Thu Mar  5 06:57:24 CST 2026
+# Force redeploy Thu Mar  5 16:41:37 CST 2026
