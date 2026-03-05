@@ -68,10 +68,14 @@ async def get_universe_reports_no_db(universe_id: str):
             }
         ],
         "coverage_report": {
-            "coverage_percentage": 95.0,
-            "total_objects": 45,
-            "covered_objects": 43,
-            "missing_objects": 2
+            "summary": {
+                "table_coverage": 0.95,
+                "dimension_coverage": 0.93,
+                "measure_coverage": 0.97,
+                "join_coverage": 0.92,
+                "overall_coverage": 0.95
+            },
+            "status": "EXCELLENT"
         },
         "semantic_diff": None,
         "available_artifacts": {

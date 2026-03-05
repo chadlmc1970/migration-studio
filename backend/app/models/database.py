@@ -18,6 +18,8 @@ class Universe(Base):
     validated_at = Column(DateTime(timezone=True), nullable=True)
     ai_enhanced = Column(Boolean, default=False)
     ai_enhancement_summary = Column(Text, nullable=True)
+    ai_enhancements = Column(JSONB, nullable=True)  # Structured AI enhancement data
+    ai_processed_at = Column(DateTime(timezone=True), nullable=True)  # When AI processing completed
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -89,6 +89,7 @@ class PipelineRunner:
         print(f"✓ Loaded universe: {cim.universe.name} (id: {cim.universe.id})")
 
         # === AI SEMANTIC ENHANCEMENT ===
+        ai_enhancements_data = None
         if AI_ENABLED:
             try:
                 print("🧠 Running AI semantic enhancement...")
@@ -113,6 +114,9 @@ class PipelineRunner:
                     # Store enhancements back in CIM
                     if not hasattr(cim, 'ai_enhancements'):
                         cim.ai_enhancements = ai
+
+                    # Capture AI data for database persistence
+                    ai_enhancements_data = ai
 
             except Exception as e:
                 print(f"⚠️  AI enhancement failed (non-critical): {e}")
@@ -178,6 +182,7 @@ class PipelineRunner:
                 "cim_file": str(cim_file),
                 "output_dir": str(universe_dir),
                 "report": report_data,
+                "ai_enhancements": ai_enhancements_data,  # AI enhancement data for DB persistence
                 "status": "success"
             }
 

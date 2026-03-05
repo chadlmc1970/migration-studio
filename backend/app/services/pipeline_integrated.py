@@ -211,6 +211,28 @@ def run_pipeline() -> Dict[str, Any]:
                     if universe:
                         universe.transformed = True
                         universe.updated_at = datetime.utcnow()
+
+                        # Save AI enhancements to database if present
+                        ai_enhancements = result.get("ai_enhancements")
+                        if ai_enhancements:
+                            universe.ai_enhanced = True
+                            universe.ai_enhancements = ai_enhancements
+                            universe.ai_processed_at = datetime.utcnow()
+
+                            # Generate human-readable summary
+                            classifications = len(ai_enhancements.get("dimension_classifications", {}))
+                            hierarchies = len(ai_enhancements.get("detected_hierarchies", []))
+                            formulas = len(ai_enhancements.get("translated_formulas", {}))
+                            universe.ai_enhancement_summary = (
+                                f"AI classified {classifications} dimensions, "
+                                f"detected {hierarchies} hierarchies, "
+                                f"translated {formulas} formulas"
+                            )
+
+                            _log_event(db, "INFO",
+                                      f"AI enhanced {universe_id}: {universe.ai_enhancement_summary}",
+                                      universe_id)
+
                         _log_event(db, "INFO", f"Transformed universe: {universe_id}", universe_id)
 
                         # Save transform artifacts to database

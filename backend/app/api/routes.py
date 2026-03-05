@@ -254,46 +254,111 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
         "lineage_dot": any(a.artifact_type == ArtifactStorage.TYPE_LINEAGE_DOT for a in artifacts),
     }
 
-    # Mock AI enhancements - in production, this would come from the AI processing team
-    # For demo purposes, show what AI improvements were made if universe is transformed
+    # Real AI enhancements from database
     ai_enhancements = []
-    if universe.transformed:
-        ai_enhancements = [
-            {
-                "category": "Query Optimization",
-                "description": "Optimized 23 complex queries by adding strategic indexes and rewriting subqueries for 40% faster execution",
-                "impact": "high"
-            },
-            {
-                "category": "Schema Refinement",
-                "description": "Normalized database schema, reducing redundancy by 35% and improving data integrity",
-                "impact": "high"
-            },
-            {
-                "category": "Data Type Mapping",
-                "description": "Intelligently mapped legacy data types to modern equivalents, preserving precision and range constraints",
-                "impact": "medium"
-            },
-            {
-                "category": "Join Path Analysis",
-                "description": "Analyzed and optimized 18 join paths, eliminating Cartesian products and reducing query complexity",
-                "impact": "high"
-            },
-            {
-                "category": "Naming Convention",
-                "description": "Standardized object naming to SAP best practices for better maintainability",
-                "impact": "low"
-            }
-        ]
+    if universe.ai_enhanced and universe.ai_enhancements:
+        # Transform AI data into display format
+        ai_data = universe.ai_enhancements
+
+        # Dimension classifications
+        classifications = ai_data.get("dimension_classifications", {})
+        if classifications:
+            ai_enhancements.append({
+                "category": "Dimension Classification",
+                "description": f"AI classified {len(classifications)} dimensions into semantic types (Time, User, Event, Object, System)",
+                "impact": "high",
+                "details": classifications
+            })
+
+        # Detected hierarchies
+        hierarchies = ai_data.get("detected_hierarchies", [])
+        if hierarchies:
+            hierarchy_names = ", ".join([h.get("name", "Unknown") for h in hierarchies])
+            ai_enhancements.append({
+                "category": "Hierarchy Detection",
+                "description": f"AI detected {len(hierarchies)} dimensional hierarchies: {hierarchy_names}",
+                "impact": "high",
+                "details": hierarchies
+            })
+
+        # Translated formulas
+        formulas = ai_data.get("translated_formulas", {})
+        if formulas:
+            ai_enhancements.append({
+                "category": "Formula Translation",
+                "description": f"AI translated {len(formulas)} BOBJ formulas to SAC syntax",
+                "impact": "medium",
+                "details": formulas
+            })
+
+        # Warnings (if any)
+        warnings = ai_data.get("warnings", [])
+        if warnings:
+            ai_enhancements.append({
+                "category": "AI Warnings",
+                "description": f"{len(warnings)} items require manual review",
+                "impact": "low",
+                "details": warnings
+            })
 
     return {
         "universe_id": universe_id,
         "coverage_report": coverage_report,
         "semantic_diff": semantic_diff,
         "lineage_graph": lineage_graph,
-        "ai_enhanced": universe.transformed,  # AI processing happens during transformation
-        "ai_enhancements": ai_enhancements if universe.transformed else [],
+        "ai_enhanced": universe.ai_enhanced,
+        "ai_enhancements": ai_enhancements,
+        "ai_processed_at": universe.ai_processed_at.isoformat() if universe.ai_processed_at else None,
         "available_artifacts": available_artifacts
+    }
+
+
+@router.get("/universes/{universe_id}/ai-insights")
+async def get_ai_insights(universe_id: str, db: Session = Depends(get_db)):
+    """
+    Get AI semantic enhancement insights for a universe
+
+    Returns detailed AI analysis including:
+    - Dimension classifications with confidence scores
+    - Detected hierarchies and drill paths
+    - Formula translations with explanations
+    - Processing metadata and warnings
+    """
+    if not is_db_available():
+        return {
+            "ai_enhanced": False,
+            "message": "Database not available"
+        }
+
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(status_code=404, detail=f"Universe not found: {universe_id}")
+
+    if not universe.ai_enhanced or not universe.ai_enhancements:
+        return {
+            "ai_enhanced": False,
+            "universe_id": universe_id,
+            "message": "AI enhancements not available for this universe"
+        }
+
+    ai_data = universe.ai_enhancements
+
+    return {
+        "ai_enhanced": True,
+        "universe_id": universe_id,
+        "processed_at": universe.ai_processed_at.isoformat() if universe.ai_processed_at else None,
+        "summary": universe.ai_enhancement_summary,
+        "dimension_classifications": ai_data.get("dimension_classifications", {}),
+        "detected_hierarchies": ai_data.get("detected_hierarchies", []),
+        "translated_formulas": ai_data.get("translated_formulas", {}),
+        "confidence_scores": ai_data.get("confidence_scores", {}),
+        "warnings": ai_data.get("warnings", []),
+        "metadata": {
+            "total_dimensions": len(ai_data.get("dimension_classifications", {})),
+            "total_hierarchies": len(ai_data.get("detected_hierarchies", [])),
+            "total_formulas": len(ai_data.get("translated_formulas", {})),
+            "has_warnings": len(ai_data.get("warnings", [])) > 0
+        }
     }
 
 
