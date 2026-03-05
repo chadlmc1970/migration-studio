@@ -15,6 +15,7 @@ sys.path.insert(0, str(ENGINES_PATH))
 from app.database import get_db
 from app.models.database import Universe, Event
 from app.services import runs
+from app.services.artifact_storage import ArtifactStorage
 
 PIPELINE_ROOT = Path.home() / "pipeline"
 LOCK_FILE = PIPELINE_ROOT / ".pipeline.lock"
@@ -119,6 +120,17 @@ def run_pipeline() -> Dict[str, Any]:
 
                 _log_event(db, "INFO", f"Parsed universe: {universe_id}", universe_id)
 
+                # Save CIM artifact to database
+                try:
+                    cim_file = PIPELINE_ROOT / "cim" / f"{universe_id}.cim.json"
+                    if cim_file.exists():
+                        ArtifactStorage.save_file_artifact(
+                            db, universe_id, ArtifactStorage.TYPE_CIM, cim_file
+                        )
+                        _log_event(db, "INFO", f"Saved CIM artifact for {universe_id}", universe_id)
+                except Exception as e:
+                    _log_event(db, "WARNING", f"Failed to save CIM artifact: {e}", universe_id)
+
             db.commit()
 
             results["parser"] = {
@@ -166,6 +178,35 @@ def run_pipeline() -> Dict[str, Any]:
                         universe.transformed = True
                         universe.updated_at = datetime.utcnow()
                         _log_event(db, "INFO", f"Transformed universe: {universe_id}", universe_id)
+
+                        # Save transform artifacts to database
+                        try:
+                            targets_dir = PIPELINE_ROOT / "targets" / universe_id
+
+                            # Save SAC model
+                            sac_model_file = targets_dir / "sac" / "model.json"
+                            if sac_model_file.exists():
+                                ArtifactStorage.save_file_artifact(
+                                    db, universe_id, ArtifactStorage.TYPE_SAC_MODEL, sac_model_file
+                                )
+
+                            # Save Datasphere views
+                            datasphere_file = targets_dir / "datasphere" / "views.sql"
+                            if datasphere_file.exists():
+                                ArtifactStorage.save_file_artifact(
+                                    db, universe_id, ArtifactStorage.TYPE_DATASPHERE_VIEWS, datasphere_file
+                                )
+
+                            # Save HANA schema
+                            hana_file = targets_dir / "hana" / "schema.sql"
+                            if hana_file.exists():
+                                ArtifactStorage.save_file_artifact(
+                                    db, universe_id, ArtifactStorage.TYPE_HANA_SCHEMA, hana_file
+                                )
+
+                            _log_event(db, "INFO", f"Saved transform artifacts for {universe_id}", universe_id)
+                        except Exception as e:
+                            _log_event(db, "WARNING", f"Failed to save transform artifacts: {e}", universe_id)
 
             db.commit()
 
@@ -216,6 +257,35 @@ def run_pipeline() -> Dict[str, Any]:
                 universe.updated_at = datetime.utcnow()
                 validated_count += 1
                 _log_event(db, "INFO", f"Validated universe: {universe.id}", universe.id)
+
+                # Save validation artifacts to database
+                try:
+                    validation_dir = PIPELINE_ROOT / "validation" / universe.id
+
+                    # Save lineage DOT graph
+                    lineage_file = validation_dir / "lineage_graph.dot"
+                    if lineage_file.exists():
+                        ArtifactStorage.save_file_artifact(
+                            db, universe.id, ArtifactStorage.TYPE_LINEAGE_DOT, lineage_file
+                        )
+
+                    # Save coverage report
+                    coverage_file = validation_dir / "coverage_report.json"
+                    if coverage_file.exists():
+                        ArtifactStorage.save_file_artifact(
+                            db, universe.id, ArtifactStorage.TYPE_COVERAGE_REPORT, coverage_file
+                        )
+
+                    # Save semantic diff
+                    semantic_file = validation_dir / "semantic_diff.json"
+                    if semantic_file.exists():
+                        ArtifactStorage.save_file_artifact(
+                            db, universe.id, ArtifactStorage.TYPE_SEMANTIC_DIFF, semantic_file
+                        )
+
+                    _log_event(db, "INFO", f"Saved validation artifacts for {universe.id}", universe.id)
+                except Exception as e:
+                    _log_event(db, "WARNING", f"Failed to save validation artifacts: {e}", universe.id)
 
             db.commit()
 

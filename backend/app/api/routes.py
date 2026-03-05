@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 from pathlib import Path
 import json
@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 from app.services.pipeline import run_pipeline
 from app.services import runs
+from app.services.artifact_storage import ArtifactStorage
 from app.database import get_db
 from app.models.database import Universe, Event, Run, ValidationReport, Artifact
 
@@ -203,56 +204,27 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
 
     validation_path = VALIDATION_DIR / universe_id
 
-    # Create validation directory if it doesn't exist
-    if not validation_path.exists():
-        validation_path.mkdir(parents=True, exist_ok=True)
+    # Get reports from database
+    coverage_report = ArtifactStorage.get_artifact_json(
+        db, universe_id, ArtifactStorage.TYPE_COVERAGE_REPORT
+    )
 
-    # Read coverage_report.json
-    coverage_report = None
-    coverage_file = validation_path / "coverage_report.json"
-    if coverage_file.exists():
-        try:
-            with open(coverage_file) as f:
-                coverage_report = json.load(f)
-        except Exception as e:
-            coverage_report = {"error": str(e)}
+    semantic_diff = ArtifactStorage.get_artifact_json(
+        db, universe_id, ArtifactStorage.TYPE_SEMANTIC_DIFF
+    )
 
-    # Read semantic_diff.json
-    semantic_diff = None
-    semantic_diff_file = validation_path / "semantic_diff.json"
-    if semantic_diff_file.exists():
-        try:
-            with open(semantic_diff_file) as f:
-                semantic_diff = json.load(f)
-        except Exception as e:
-            semantic_diff = {"error": str(e)}
+    # Get lineage graph
+    lineage_graph = ArtifactStorage.get_artifact_content(
+        db, universe_id, ArtifactStorage.TYPE_LINEAGE_DOT
+    )
 
-    # Read lineage graph
-    lineage_graph = None
-    lineage_graph_file = validation_path / "lineage_graph.json"
-    if lineage_graph_file.exists():
-        try:
-            with open(lineage_graph_file) as f:
-                lineage_graph = json.dumps(json.load(f))
-        except Exception as e:
-            lineage_graph = None
-
-    if not lineage_graph:
-        lineage_dot_file = validation_path / "lineage_graph.dot"
-        if lineage_dot_file.exists():
-            try:
-                with open(lineage_dot_file) as f:
-                    lineage_graph = f.read()
-            except Exception:
-                pass
-
-    # Check available artifacts based on database state (enterprise-ready, works in production)
-    # If transformed=True and validated=True in DB, artifacts exist (local filesystem or can be regenerated)
+    # Check available artifacts based on database
+    artifacts = ArtifactStorage.list_artifacts(db, universe_id)
     available_artifacts = {
-        "sac_model": universe.transformed,
-        "datasphere_views": universe.transformed,
-        "hana_schema": universe.transformed,
-        "lineage_dot": universe.validated
+        "sac_model": any(a.artifact_type == ArtifactStorage.TYPE_SAC_MODEL for a in artifacts),
+        "datasphere_views": any(a.artifact_type == ArtifactStorage.TYPE_DATASPHERE_VIEWS for a in artifacts),
+        "hana_schema": any(a.artifact_type == ArtifactStorage.TYPE_HANA_SCHEMA for a in artifacts),
+        "lineage_dot": any(a.artifact_type == ArtifactStorage.TYPE_LINEAGE_DOT for a in artifacts),
     }
 
     return {
@@ -265,82 +237,59 @@ async def get_universe_reports(universe_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/universes/{universe_id}/sac")
-async def get_sac_model(universe_id: str):
-    """Get SAC model JSON for a universe"""
-    sac_model_path = TARGETS_DIR / universe_id / "sac" / "model.json"
+async def get_sac_model(universe_id: str, db: Session = Depends(get_db)):
+    """Get SAC model JSON for a universe from database"""
+    sac_model = ArtifactStorage.get_artifact_json(
+        db, universe_id, ArtifactStorage.TYPE_SAC_MODEL
+    )
 
-    if not sac_model_path.exists():
+    if not sac_model:
         raise HTTPException(
             status_code=404,
             detail=f"SAC model not found for universe: {universe_id}"
         )
 
-    try:
-        with open(sac_model_path) as f:
-            return json.load(f)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to load SAC model: {str(e)}"
-        )
+    return sac_model
 
 
 @router.get("/universes/{universe_id}/download")
-async def download_universe_artifact(universe_id: str, artifact: str):
-    """Serve artifact files from ~/pipeline/targets/{universe_id}/ or validation"""
+async def download_universe_artifact(universe_id: str, artifact: str, db: Session = Depends(get_db)):
+    """Serve artifact files from database"""
 
-    # Special case: lineage_graph.dot comes from validation directory
-    if artifact == "lineage_graph.dot":
-        validation_path = VALIDATION_DIR / universe_id
-        artifact_file = validation_path / artifact
+    # Map artifact path to artifact type
+    artifact_type_map = {
+        "lineage_graph.dot": ArtifactStorage.TYPE_LINEAGE_DOT,
+        "sac/model.json": ArtifactStorage.TYPE_SAC_MODEL,
+        "datasphere/views.sql": ArtifactStorage.TYPE_DATASPHERE_VIEWS,
+        "hana/schema.sql": ArtifactStorage.TYPE_HANA_SCHEMA,
+        "cim.json": ArtifactStorage.TYPE_CIM,
+        "coverage_report.json": ArtifactStorage.TYPE_COVERAGE_REPORT,
+        "semantic_diff.json": ArtifactStorage.TYPE_SEMANTIC_DIFF,
+    }
 
-        if not artifact_file.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Artifact not found: {artifact}"
-            )
-
-        return FileResponse(
-            path=str(artifact_file),
-            media_type="text/plain",
-            filename=artifact_file.name
-        )
-
-    # Other artifacts come from targets directory
-    targets_path = TARGETS_DIR / universe_id
-
-    if not targets_path.exists():
+    artifact_type = artifact_type_map.get(artifact)
+    if not artifact_type:
         raise HTTPException(
-            status_code=404,
-            detail=f"Targets directory not found for universe: {universe_id}"
+            status_code=400,
+            detail=f"Unknown artifact type: {artifact}"
         )
 
-    artifact_file = targets_path / artifact
+    artifact_obj = ArtifactStorage.get_artifact(db, universe_id, artifact_type)
 
-    if not artifact_file.exists():
+    if not artifact_obj:
         raise HTTPException(
             status_code=404,
             detail=f"Artifact not found: {artifact}"
         )
 
-    if not artifact_file.is_file():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Path is not a file: {artifact}"
-        )
+    # Determine filename
+    filename = artifact.split("/")[-1]  # Extract filename from path
 
-    # Determine media type
-    if artifact.endswith('.json'):
-        media_type = "application/json"
-    elif artifact.endswith('.sql'):
-        media_type = "text/plain"
-    else:
-        media_type = "application/octet-stream"
-
-    return FileResponse(
-        path=str(artifact_file),
-        media_type=media_type,
-        filename=artifact_file.name
+    # Return artifact content as response
+    return Response(
+        content=artifact_obj.content,
+        media_type=artifact_obj.content_type or "text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 

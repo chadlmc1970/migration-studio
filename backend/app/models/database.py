@@ -74,9 +74,11 @@ class Artifact(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     universe_id = Column(String(255), ForeignKey("universes.id", ondelete="CASCADE"), nullable=False)
-    artifact_type = Column(String(50), nullable=False)  # sac_model, datasphere_views, hana_schema, lineage_dot
-    file_path = Column(Text, nullable=False)
+    artifact_type = Column(String(50), nullable=False)  # sac_model, datasphere_views, hana_schema, lineage_dot, cim
+    content = Column(Text, nullable=False)  # JSON or SQL content stored directly
     file_size = Column(Integer, nullable=True)
+    content_type = Column(String(100), nullable=True)  # application/json, text/sql, text/plain
+    version = Column(Integer, default=1)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relationships
