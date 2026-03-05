@@ -21,14 +21,11 @@ services:
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        sync: false  # Set in Render dashboard
+        value: postgresql://neondb_owner:REPLACE_WITH_PASSWORD@ep-dark-hill-aiwdm4cf-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require
       - key: FRONTEND_URL
-        value: https://migration-studio-frontend.onrender.com
+        value: https://migration-studio-pqor.onrender.com
       - key: ENVIRONMENT
         value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set in Render dashboard for AI enhancements
 
-databases:
-  - name: migration-db
-    databaseName: neondb
-    user: neondb_owner
-    region: oregon

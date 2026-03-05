@@ -19,8 +19,8 @@ allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     FRONTEND_URL,
-    "https://migration-studio-pqor.onrender.com",  # Actual deployed frontend
-    "https://migration-studio-frontend.onrender.com"  # Future separate service
+    "https://migration-studio-pqor.onrender.com",  # Production frontend
+    "https://migration-studio-api.onrender.com"  # API itself for health checks
 ]
 
 # Remove duplicates
