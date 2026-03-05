@@ -15,12 +15,12 @@ export default function Hero() {
           {/* Left: Content */}
           <div className="relative z-10 max-w-xl">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/20 backdrop-blur-sm mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500/10 to-indigo-500/10 px-3 py-1 text-xs font-medium text-purple-300 ring-1 ring-inset ring-purple-500/20 backdrop-blur-sm mb-6">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
               </span>
-              SAP Analytics Modernization
+              AI-Powered SAP Analytics Modernization
             </div>
 
             {/* Headline */}
@@ -37,9 +37,26 @@ export default function Hero() {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl text-slate-300 mb-10 max-w-lg leading-relaxed">
+            <p className="text-xl text-slate-300 mb-4 max-w-lg leading-relaxed">
               Automated universe conversion to SAC, Datasphere, and HANA with semantic validation. Minutes, not months.
             </p>
+
+            {/* AI Value Prop */}
+            <div className="mb-10 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10 p-4 ring-1 ring-purple-500/20 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-purple-200 mb-1">Claude AI Enhancements</p>
+                  <p className="text-xs text-slate-400">
+                    Every migration is analyzed and optimized by Claude - improving query performance up to 40%, refining schemas, and eliminating technical debt automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4 mb-10">

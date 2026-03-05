@@ -1,6 +1,18 @@
 export default function Features() {
   const features = [
     {
+      name: 'AI-Powered Intelligence',
+      description: 'Claude analyzes every migration, optimizing queries up to 40%, refining schemas, and eliminating technical debt automatically.',
+      icon: (
+        <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      ),
+      gradient: 'from-purple-400 to-indigo-500',
+      bgGradient: 'from-purple-500/10 to-indigo-500/10',
+      featured: true,
+    },
+    {
       name: 'Lightning Fast',
       description: 'Convert universes in minutes, not days. Automated parsing and transformation pipeline.',
       icon: (
@@ -41,8 +53,8 @@ export default function Features() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
         </svg>
       ),
-      gradient: 'from-purple-400 to-pink-500',
-      bgGradient: 'from-purple-500/10 to-pink-500/10',
+      gradient: 'from-cyan-400 to-blue-500',
+      bgGradient: 'from-cyan-500/10 to-blue-500/10',
     },
     {
       name: 'Full Visibility',
@@ -90,8 +102,24 @@ export default function Features() {
           {features.map((feature) => (
             <div
               key={feature.name}
-              className="group relative rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:border-slate-300"
+              className={`group relative rounded-2xl border ${
+                feature.featured
+                  ? 'border-purple-300 ring-2 ring-purple-500/20'
+                  : 'border-slate-200'
+              } bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:border-slate-300`}
             >
+              {/* Featured badge */}
+              {feature.featured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    AI Powered
+                  </span>
+                </div>
+              )}
+
               {/* Gradient background on hover */}
               <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.bgGradient} opacity-0 transition-opacity group-hover:opacity-100`} />
 
