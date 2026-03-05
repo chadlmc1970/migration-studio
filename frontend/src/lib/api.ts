@@ -69,6 +69,9 @@ export const api = {
   // Get all runs
   getRuns: (limit: number = 50) => fetchAPI<RunRecord[]>(`/runs?limit=${limit}`),
 
+  // Get active runs
+  getActiveRuns: () => fetchAPI<RunRecord[]>('/runs/active'),
+
   // Delete a run and its associated files
   deleteRun: (runId: string) =>
     fetchAPI<{ status: string; message: string }>(`/runs/${runId}`, {

@@ -14,12 +14,27 @@ export default function RunsPage() {
   const [loadingUniverses, setLoadingUniverses] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [activeRunning, setActiveRunning] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadRuns()
     loadUniverses()
+    checkActiveRuns()
+
+    // Poll for active runs every 3 seconds
+    const interval = setInterval(checkActiveRuns, 3000)
+    return () => clearInterval(interval)
   }, [])
+
+  async function checkActiveRuns() {
+    try {
+      const activeRuns = await api.getActiveRuns()
+      setActiveRunning(activeRuns.length > 0)
+    } catch (err) {
+      console.error('Failed to check active runs:', err)
+    }
+  }
 
   async function loadRuns() {
     try {
@@ -141,7 +156,6 @@ export default function RunsPage() {
   }
 
   const pendingUniverses = universes.filter(u => !u.parsed)
-  const processingUniverses = universes.filter(u => u.parsed && !u.validated)
 
   return (
     <div className="space-y-6">
@@ -275,10 +289,10 @@ export default function RunsPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Processing</p>
-                  <p className="text-xs text-slate-400">In pipeline</p>
+                  <p className="text-xs text-slate-400">Pipeline running</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold">{processingUniverses.length}</span>
+              <span className="text-2xl font-bold">{activeRunning ? 1 : 0}</span>
             </div>
 
             <div className="flex items-center justify-between">
