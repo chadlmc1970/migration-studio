@@ -17,6 +17,11 @@ const nextConfig = {
     maxInactiveAge: 60 * 1000,
     pagesBufferLength: 2,
   },
+
+  // Force rebuild: 2026-03-05
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
 }
 
 module.exports = nextConfig
