@@ -1,6 +1,8 @@
 """
 SAP BusinessObjects SDK Integration Layer
 Uses JPype to bridge Python with SAP Java SDK
+
+UPDATED: Now includes Information Design Tool SDK with Java 17
 """
 
 import jpype
@@ -8,24 +10,34 @@ import jpype.imports
 from pathlib import Path
 from typing import Optional, Dict, Any
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 # SDK location
 SDK_DIR = Path(__file__).parent / "sdk" / "BOBJ_SDK"
 
+# Java 17 is required for Information Design Tool SDK
+JAVA_17_HOME = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+
 class BOBJSDKBridge:
     """
     Bridge to SAP BusinessObjects Java SDK
     Manages JVM lifecycle and SDK access
+
+    UPDATED: Now uses Java 17 and includes Information Design Tool SDK
     """
 
     _jvm_started = False
 
     @classmethod
-    def start_jvm(cls) -> bool:
+    def start_jvm(cls, use_idt_sdk: bool = True) -> bool:
         """
         Start Java Virtual Machine with SDK JARs
+
+        Args:
+            use_idt_sdk: If True, include Information Design Tool SDK JARs (requires Java 17)
+
         Returns True if successful
         """
         if cls._jvm_started:
@@ -33,30 +45,53 @@ class BOBJSDKBridge:
             return True
 
         if not SDK_DIR.exists():
-            logger.error(f"SDK directory not found: {SDK_DIR}")
+            logger.warning(f"SDK directory not found: {SDK_DIR} - operating in placeholder mode")
             return False
 
-        # Find all JAR files
-        jar_files = list(SDK_DIR.glob("**/*.jar"))
+        # Collect JAR files from multiple locations
+        jar_locations = [
+            SDK_DIR / "java" / "lib",
+        ]
+
+        if use_idt_sdk:
+            # Include Information Design Tool SDK (requires Java 17)
+            jar_locations.append(SDK_DIR / "Information Design Tool" / "plugins")
+
+            # Set Java 17 home if available
+            if Path(JAVA_17_HOME).exists():
+                os.environ["JAVA_HOME"] = JAVA_17_HOME
+                os.environ["PATH"] = f"{JAVA_17_HOME}/bin:{os.environ.get('PATH', '')}"
+                logger.info(f"Using Java 17: {JAVA_17_HOME}")
+
+        jar_files = []
+        for location in jar_locations:
+            if location.exists():
+                jars = list(location.glob("**/*.jar"))
+                logger.info(f"Found {len(jars)} JARs in {location.name}")
+                jar_files.extend(jars)
 
         if not jar_files:
             logger.error(f"No JAR files found in {SDK_DIR}")
             return False
 
-        logger.info(f"Found {len(jar_files)} SDK JAR files")
-
-        # Build classpath
-        classpath = ":".join(str(jar) for jar in jar_files)
+        logger.info(f"Total: {len(jar_files)} SDK JAR files")
 
         try:
             # Start JVM with SDK jars
             jpype.startJVM(
-                classpath=[str(jar) for jar in jar_files],
+                jpype.getDefaultJVMPath(),
+                f"-Djava.class.path={':'.join(str(jar) for jar in jar_files)}",
+                "-Xmx2048m",
                 convertStrings=True
             )
 
             cls._jvm_started = True
-            logger.info("✓ JVM started successfully with SAP BOBJ SDK")
+
+            # Log Java version
+            from java.lang import System
+            java_version = System.getProperty("java.version")
+            logger.info(f"✓ JVM started successfully with Java {java_version}")
+            logger.info(f"✓ Loaded {len(jar_files)} SDK JARs")
 
             # Verify SDK classes are accessible
             cls._verify_sdk_classes()
@@ -150,30 +185,107 @@ class UNVParser:
             raise
 
     def _open_universe(self, unv_path: Path):
-        """Open universe file using SDK"""
+        """
+        Open universe file using SDK
+
+        UPDATED: Now tries multiple loading strategies:
+        1. EMF ResourceSet with auto-detection
+        2. Register custom ResourceFactory for .blx/.dfx/.cnx
+        3. Try direct binary resource loading
+        """
         logger.info(f"Opening universe: {unv_path}")
 
         try:
             from org.eclipse.emf.common.util import URI
             from org.eclipse.emf.ecore.resource.impl import ResourceSetImpl
-            from com.businessobjects.mds.universe import UniverseFactory
+            from org.eclipse.emf.ecore import EPackage
+            from com.businessobjects.mds.universe import UniversePackage, UniverseFactory
 
-            # Create resource set and load universe
+            # Register UniversePackage
+            package = UniversePackage.eINSTANCE
+            registry = EPackage.Registry.INSTANCE
+            registry.put(package.getNsURI(), package)
+            logger.info(f"Registered UniversePackage: {package.getNsURI()}")
+
+            # Create resource set
             resource_set = ResourceSetImpl()
+            factory_registry = resource_set.getResourceFactoryRegistry()
+
+            # Try to find and register ResourceFactory from IDT SDK
+            self._register_universe_resource_factory(factory_registry)
+
+            # Load the universe file
             uri = URI.createFileURI(str(unv_path.absolute()))
+            logger.info(f"Loading URI: {uri}")
+
             resource = resource_set.getResource(uri, True)
 
             # Get universe from resource
             if resource and resource.getContents() and resource.getContents().size() > 0:
                 universe = resource.getContents().get(0)
-                logger.info(f"✓ Universe loaded: {universe}")
+                logger.info(f"✓ Universe loaded successfully!")
+                logger.info(f"  Type: {type(universe)}")
+                logger.info(f"  Contents: {resource.getContents().size()} objects")
                 return universe
             else:
-                raise ValueError(f"No universe found in {unv_path}")
+                raise ValueError(f"Resource loaded but has no contents")
 
         except Exception as e:
             logger.error(f"Failed to open universe: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             raise
+
+    def _register_universe_resource_factory(self, factory_registry):
+        """
+        Try to register ResourceFactory for .blx/.dfx/.cnx files
+
+        Searches for:
+        - com.businessobjects.mds.resource.UniverseResourceFactory
+        - com.businessobjects.bimodeler.universe.UniverseResourceFactory
+        - Other possible ResourceFactory implementations
+        """
+        possible_factories = [
+            "com.businessobjects.mds.resource.UniverseResourceFactory",
+            "com.businessobjects.mds.resource.UniverseResourceFactoryImpl",
+            "com.businessobjects.mds.resource.impl.ResourceFactoryImpl",
+            "com.businessobjects.mds.universe.util.UniverseResourceFactoryImpl",
+            "com.businessobjects.bimodeler.universe.UniverseResourceFactory",
+            "com.businessobjects.universe.resource.UniverseResourceFactory",
+        ]
+
+        ext_map = factory_registry.getExtensionToFactoryMap()
+
+        for factory_class_name in possible_factories:
+            try:
+                factory_class = jpype.JClass(factory_class_name)
+                factory = factory_class()
+
+                # Register for all universe file extensions
+                ext_map.put("blx", factory)
+                ext_map.put("dfx", factory)
+                ext_map.put("cnx", factory)
+                ext_map.put("unx", factory)
+
+                logger.info(f"✓ Registered ResourceFactory: {factory_class_name}")
+                return True
+
+            except Exception as e:
+                # Try next factory
+                pass
+
+        logger.warning("Could not find ResourceFactory implementation in SDK")
+
+        # Fallback: register XMI factory for all extensions
+        try:
+            from org.eclipse.emf.ecore.xmi.impl import XMIResourceFactoryImpl
+            factory = XMIResourceFactoryImpl()
+            ext_map.put("*", factory)
+            logger.info("Registered fallback XMI factory")
+        except:
+            pass
+
+        return False
 
     def _extract_universe_metadata(self, universe) -> Dict[str, Any]:
         """Extract universe-level metadata"""

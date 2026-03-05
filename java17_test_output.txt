@@ -1,0 +1,22 @@
+================================================================================
+🎯 BREAKTHROUGH TEST #2: Java 17 + Information Design Tool
+================================================================================
+
+1. Collecting JAR files (Java 17 compatible)...
+   lib: 383 JARs
+   plugins: 407 JARs
+
+   ✓ Total JARs: 790
+
+2. Starting JVM with Java 17...
+   JAVA_HOME: /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+   ✓ JVM started
+   Java version: 17.0.18
+   Java runtime: 17.0.18+0
+
+3. Importing UniversePackage with Java 17...
+   ✗ Failed: Unable to import 'com.businessobjects.mds.universe.UniversePackage' due to initializer error
+
+================================================================================
+Still investigating...
+================================================================================
