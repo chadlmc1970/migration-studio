@@ -25,6 +25,20 @@ async def api_health():
     return {"status": "healthy", "message": "API routes ready"}
 
 
+@router.get("/ai-status")
+async def ai_status():
+    """Diagnostic endpoint to check AI configuration"""
+    from app.config import ANTHROPIC_API_KEY, AI_ENABLED, AI_MODEL
+
+    return {
+        "ai_enabled": AI_ENABLED,
+        "api_key_configured": bool(ANTHROPIC_API_KEY),
+        "api_key_length": len(ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else 0,
+        "api_key_prefix": ANTHROPIC_API_KEY[:20] if ANTHROPIC_API_KEY else None,
+        "ai_model": AI_MODEL
+    }
+
+
 @router.get("/state")
 async def get_state(db: Session = Depends(get_db)):
     """Get pipeline state from database"""
