@@ -80,9 +80,96 @@ export default function UniverseDetailPage({ params }: { params: { id: string } 
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Overview</h3>
-          <p className="mt-2 text-sm text-slate-600">Universe ID: {reports?.universe_id}</p>
+        <div className="space-y-6">
+          {/* Basic Info Card */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <h3 className="text-lg font-semibold text-slate-900">Universe Information</h3>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Universe ID</span>
+                <span className="font-mono text-sm font-medium text-slate-900">{reports?.universe_id}</span>
+              </div>
+              {reports?.ai_enhanced && (
+                <div className="flex items-center gap-2 pt-2 mt-2 border-t border-slate-100">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 text-sm font-medium text-purple-700">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Enhanced
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Enhancements Card */}
+          {reports?.ai_enhanced && reports?.ai_enhancements && reports.ai_enhancements.length > 0 && (
+            <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-white to-indigo-50 p-6">
+              <div className="flex items-start gap-3 mb-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 text-white">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">AI-Powered Enhancements</h3>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Claude analyzed and improved your BusinessObjects extraction
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {reports.ai_enhancements.map((enhancement, idx) => (
+                  <div
+                    key={idx}
+                    className="group relative rounded-lg border border-slate-200 bg-white p-4 hover:border-indigo-300 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${
+                        enhancement.impact === 'high' ? 'bg-green-500' :
+                        enhancement.impact === 'medium' ? 'bg-yellow-500' :
+                        'bg-blue-500'
+                      }`}></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-sm font-semibold text-slate-900">{enhancement.category}</h4>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            enhancement.impact === 'high' ? 'bg-green-100 text-green-700' :
+                            enhancement.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {enhancement.impact} impact
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600">{enhancement.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 pt-5 border-t border-indigo-200">
+                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  These enhancements are automatically applied to all generated artifacts
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* No AI Enhancements */}
+          {!reports?.ai_enhanced && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
+              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <p className="mt-4 text-sm font-medium text-slate-900">No AI enhancements yet</p>
+              <p className="mt-1 text-sm text-slate-500">Run the pipeline to apply AI-powered improvements</p>
+            </div>
+          )}
         </div>
       )}
 

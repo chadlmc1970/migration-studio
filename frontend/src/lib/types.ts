@@ -26,6 +26,8 @@ export interface UniverseInfo {
   validated_at?: string
   coverage?: number
   last_updated?: string
+  ai_enhanced?: boolean
+  ai_enhancement_summary?: string
 }
 
 export interface KPIStats {
@@ -34,6 +36,12 @@ export interface KPIStats {
   transformed: number
   validated: number
   needs_attention: number
+}
+
+export interface AIEnhancement {
+  category: string  // e.g., "Query Optimization", "Schema Refinement"
+  description: string
+  impact: 'high' | 'medium' | 'low'
 }
 
 export interface CoverageReport {
@@ -63,6 +71,8 @@ export interface UniverseReports {
   coverage_report?: CoverageReport
   semantic_diff?: SemanticDiff
   lineage_graph?: any
+  ai_enhanced?: boolean
+  ai_enhancements?: AIEnhancement[]
   available_artifacts: {
     sac_model: boolean
     datasphere_views: boolean

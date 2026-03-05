@@ -7,6 +7,8 @@ CREATE TABLE universes (
     transformed BOOLEAN DEFAULT FALSE,
     validated BOOLEAN DEFAULT FALSE,
     validated_at TIMESTAMPTZ,
+    ai_enhanced BOOLEAN DEFAULT FALSE,
+    ai_enhancement_summary TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,13 +46,15 @@ CREATE TABLE validation_reports (
     FOREIGN KEY (universe_id) REFERENCES universes(id) ON DELETE CASCADE
 );
 
--- Artifacts table - track available downloads
+-- Artifacts table - track available downloads with AI enhancement info
 CREATE TABLE artifacts (
     id SERIAL PRIMARY KEY,
     universe_id VARCHAR(255) NOT NULL,
     artifact_type VARCHAR(50) NOT NULL, -- sac_model, datasphere_views, hana_schema, lineage_dot
     file_path TEXT NOT NULL,
     file_size INTEGER,
+    ai_enhanced BOOLEAN DEFAULT FALSE,
+    ai_enhancements JSONB, -- Store what AI improvements were made
     created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (universe_id) REFERENCES universes(id) ON DELETE CASCADE,
     UNIQUE(universe_id, artifact_type)

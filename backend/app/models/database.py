@@ -16,6 +16,8 @@ class Universe(Base):
     transformed = Column(Boolean, default=False)
     validated = Column(Boolean, default=False)
     validated_at = Column(DateTime(timezone=True), nullable=True)
+    ai_enhanced = Column(Boolean, default=False)
+    ai_enhancement_summary = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
