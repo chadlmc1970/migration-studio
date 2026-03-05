@@ -166,6 +166,40 @@ def run_pipeline() -> Dict[str, Any]:
             # Import transform engine
             from cim_transform.pipeline_runner import PipelineRunner
 
+            # Get all parsed universes from database that haven't been transformed OR lack artifacts
+            universes_to_transform = db.query(Universe).filter(Universe.parsed == True).all()
+
+            # For each universe, check if it needs transformation
+            universes_needing_transform = []
+            cim_dir = PIPELINE_ROOT / "cim"
+            cim_dir.mkdir(parents=True, exist_ok=True)
+
+            for universe in universes_to_transform:
+                # Check if universe lacks artifacts in database
+                needs_transform = (
+                    not universe.transformed or
+                    not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_SAC_MODEL) or
+                    not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_CIM)
+                )
+
+                if needs_transform:
+                    # Restore CIM file from database to filesystem (if it exists in DB)
+                    cim_content = ArtifactStorage.get_artifact_content(db, universe.id, ArtifactStorage.TYPE_CIM)
+                    if cim_content:
+                        cim_file = cim_dir / f"{universe.id}.cim.json"
+                        with open(cim_file, 'w') as f:
+                            f.write(cim_content)
+                        _log_event(db, "INFO", f"Restored CIM file for {universe.id} from database", universe.id)
+
+                    # Force transformed flag to False so pipeline will process it
+                    universe.transformed = False
+                    universes_needing_transform.append(universe.id)
+
+            db.commit()
+
+            if universes_needing_transform:
+                _log_event(db, "INFO", f"Universes needing transformation: {', '.join(universes_needing_transform)}")
+
             transform_runner = PipelineRunner(PIPELINE_ROOT)
             transform_results = transform_runner.run(force=False)
 
