@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import json
 
-from ..model.cim import CanonicalModel, SourceFile, Table, Join, Dimension, Measure
+from ..model.cim import CanonicalModel, SourceFile
 from ..util.hashing import sha256_file
 from ..util.logging import ConversionLogger
 
@@ -73,10 +73,17 @@ def extract_unv(input_path: Path, output_dir: Path, logger: ConversionLogger) ->
             parser = UNVParser()
             cim_data = parser.parse_universe(input_path)
 
-            # Convert SDK output to CanonicalModel
-            _populate_cim_from_sdk(cim, cim_data, logger)
+            # Update CIM with SDK data
+            cim.data_foundation.tables = [t['name'] for t in cim_data.get('tables', [])]
+            cim.data_foundation.joins = cim_data.get('joins', [])
+            cim.business_layer.dimensions = [d['name'] for d in cim_data.get('dimensions', [])]
+            cim.business_layer.measures = [m['name'] for m in cim_data.get('measures', [])]
 
-            logger.log(f"✓ Extracted: {len(cim.tables)} tables, {len(cim.dimensions)} dimensions, {len(cim.measures)} measures")
+            # Store full details in metadata
+            cim.metadata['dimension_details'] = cim_data.get('dimensions', [])
+            cim.metadata['measure_details'] = cim_data.get('measures', [])
+
+            logger.log(f"✓ Extracted: {len(cim.data_foundation.tables)} tables, {len(cim.business_layer.dimensions)} dimensions, {len(cim.business_layer.measures)} measures")
 
             # Log advanced features
             if cim_data.get('contexts'):
@@ -165,50 +172,42 @@ def extract_from_json(json_path: Path, unv_path: Path, output_dir: Path, logger:
         )
 
         # Extract tables
+        tables = []
         for table_name in json_data.get("tables", []):
             if isinstance(table_name, str):
-                cim.add_table(Table(
-                    name=table_name,
-                    table_type="table"
-                ))
+                tables.append(table_name)
             elif isinstance(table_name, dict):
-                cim.add_table(Table(
-                    name=table_name.get("name", "Unknown"),
-                    table_type=table_name.get("type", "table"),
-                    sql=table_name.get("sql")
-                ))
+                tables.append(table_name.get("name", "Unknown"))
+        cim.data_foundation.tables = tables
 
         # Extract joins
+        joins = []
         for join_data in json_data.get("joins", []):
-            cim.add_join(Join(
-                name=join_data.get("name", ""),
-                left_table=join_data.get("left_table", ""),
-                right_table=join_data.get("right_table", ""),
-                join_type=join_data.get("type", "inner"),
-                condition=join_data.get("condition", ""),
-                cardinality=join_data.get("cardinality")
-            ))
+            joins.append({
+                "name": join_data.get("name", ""),
+                "left_table": join_data.get("left_table", ""),
+                "right_table": join_data.get("right_table", ""),
+                "type": join_data.get("type", "inner"),
+                "condition": join_data.get("condition", ""),
+                "cardinality": join_data.get("cardinality")
+            })
+        cim.data_foundation.joins = joins
 
         # Extract dimensions
+        dimensions = []
         for dim_data in json_data.get("dimensions", []):
-            cim.add_dimension(Dimension(
-                name=dim_data.get("name", ""),
-                table=dim_data.get("table"),
-                column=dim_data.get("column"),
-                description=dim_data.get("description", ""),
-                qualification=dim_data.get("qualification", "dimension")
-            ))
+            dimensions.append(dim_data.get("name", ""))
+        cim.business_layer.dimensions = dimensions
 
         # Extract measures
+        measures = []
         for measure_data in json_data.get("measures", []):
-            cim.add_measure(Measure(
-                name=measure_data.get("name", ""),
-                table=measure_data.get("table"),
-                column=measure_data.get("column"),
-                aggregation=measure_data.get("aggregation", "SUM"),
-                formula=measure_data.get("formula"),
-                description=measure_data.get("description", "")
-            ))
+            measures.append(measure_data.get("name", ""))
+        cim.business_layer.measures = measures
+
+        # Store full details in metadata
+        cim.metadata["dimension_details"] = json_data.get("dimensions", [])
+        cim.metadata["measure_details"] = json_data.get("measures", [])
 
         # Store filters and other metadata
         if "filters" in json_data:
@@ -221,10 +220,10 @@ def extract_from_json(json_path: Path, unv_path: Path, output_dir: Path, logger:
         cim.update_counts()
 
         logger.log(f"✅ JSON extraction complete:")
-        logger.log(f"   - {len(cim.tables)} tables")
-        logger.log(f"   - {len(cim.joins)} joins")
-        logger.log(f"   - {len(cim.dimensions)} dimensions")
-        logger.log(f"   - {len(cim.measures)} measures")
+        logger.log(f"   - {len(cim.data_foundation.tables)} tables")
+        logger.log(f"   - {len(cim.data_foundation.joins)} joins")
+        logger.log(f"   - {len(cim.business_layer.dimensions)} dimensions")
+        logger.log(f"   - {len(cim.business_layer.measures)} measures")
         if "filters" in json_data:
             logger.log(f"   - {len(json_data['filters'])} filters")
 
@@ -232,65 +231,17 @@ def extract_from_json(json_path: Path, unv_path: Path, output_dir: Path, logger:
 
     except Exception as e:
         logger.error(f"Failed to parse JSON: {e}")
-        logger.warn("Falling back to binary extraction")
-        # Fall through to binary extraction
-        return extract_from_binary(unv_path, output_dir, logger)
-
-
-def extract_from_binary(input_path: Path, output_dir: Path, logger: ConversionLogger) -> CanonicalModel:
-    """
-    Extract from binary .unv file using SDK (original method).
-
-    This is the SLOW PATH - requires SDK and may hit encryption issues.
-    """
-    logger.log("Attempting binary extraction with SDK...")
-
-    """Populate CanonicalModel from SDK-extracted data"""
-
-    # Add tables
-    for table_data in cim_data.get('tables', []):
-        table = Table(
-            name=table_data['name'],
-            table_type=table_data.get('type', 'table')
+        logger.warn("Falling back to placeholder mode")
+        # Fall back to placeholder
+        universe_id = unv_path.stem
+        cim = CanonicalModel(
+            universe_id=universe_id,
+            universe_name=universe_id,
+            source_format="unv",
         )
-        table.metadata['sql'] = table_data.get('sql')
-        table.metadata['description'] = table_data.get('description')
-        cim.tables.append(table)
+        _create_placeholder_cim(cim, logger)
+        return cim
 
-    # Add joins
-    for join_data in cim_data.get('joins', []):
-        join = Join(
-            left_table=join_data['left_table'],
-            right_table=join_data['right_table'],
-            join_type=join_data.get('type', 'inner'),
-            condition=join_data['condition']
-        )
-        join.metadata['cardinality'] = join_data.get('cardinality')
-        cim.joins.append(join)
-
-    # Add dimensions
-    for dim_data in cim_data.get('dimensions', []):
-        dim = Dimension(
-            name=dim_data['name'],
-            source_table=dim_data.get('table'),
-            source_column=dim_data.get('column'),
-            description=dim_data.get('description', '')
-        )
-        dim.metadata['type'] = dim_data.get('type')
-        dim.metadata['qualification'] = dim_data.get('qualification')
-        cim.dimensions.append(dim)
-
-    # Add measures
-    for measure_data in cim_data.get('measures', []):
-        measure = Measure(
-            name=measure_data['name'],
-            source_table=measure_data.get('table'),
-            source_column=measure_data.get('column'),
-            aggregation=measure_data.get('aggregation', 'SUM'),
-            description=measure_data.get('description', '')
-        )
-        measure.metadata['formula'] = measure_data.get('formula')
-        cim.measures.append(measure)
 
 
 def _create_placeholder_cim(cim: CanonicalModel, logger: ConversionLogger):
