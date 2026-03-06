@@ -27,6 +27,7 @@ class ArtifactStorage:
     TYPE_CIM = "cim"
     TYPE_COVERAGE_REPORT = "coverage_report"
     TYPE_SEMANTIC_DIFF = "semantic_diff"
+    TYPE_SOURCE_UNX = "source_unx"  # Original .unx file uploaded by user
 
     # Content type mappings
     CONTENT_TYPES = {
@@ -37,6 +38,7 @@ class ArtifactStorage:
         TYPE_CIM: "application/json",
         TYPE_COVERAGE_REPORT: "application/json",
         TYPE_SEMANTIC_DIFF: "application/json",
+        TYPE_SOURCE_UNX: "application/zip",
     }
 
     @classmethod
@@ -124,6 +126,20 @@ class ArtifactStorage:
         """Save artifact from file"""
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
+        return cls.save_artifact(db, universe_id, artifact_type, content, version)
+
+    @classmethod
+    def save_binary_artifact(
+        cls,
+        db: Session,
+        universe_id: str,
+        artifact_type: str,
+        binary_content: bytes,
+        version: int = 1
+    ) -> Artifact:
+        """Save binary artifact (for .unx files)"""
+        import base64
+        content = base64.b64encode(binary_content).decode('utf-8')
         return cls.save_artifact(db, universe_id, artifact_type, content, version)
 
     @classmethod

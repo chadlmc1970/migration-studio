@@ -92,6 +92,36 @@ def run_pipeline() -> Dict[str, Any]:
     db = next(get_db())
 
     try:
+        # STAGE 0: Extract source files from database to filesystem
+        _log_event(db, "INFO", "Extracting source files from database")
+        import base64
+
+        # Get all universes with source_unx artifacts
+        from app.models.database import Artifact
+        source_artifacts = db.query(Artifact).filter(
+            Artifact.artifact_type == ArtifactStorage.TYPE_SOURCE_UNX
+        ).all()
+
+        if source_artifacts:
+            INPUT_DIR = PIPELINE_ROOT / "input"
+            INPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+            for artifact in source_artifacts:
+                try:
+                    # Decode base64 content
+                    binary_content = base64.b64decode(artifact.content)
+
+                    # Write to filesystem
+                    file_path = INPUT_DIR / f"{artifact.universe_id}.unx"
+                    with open(file_path, 'wb') as f:
+                        f.write(binary_content)
+
+                    _log_event(db, "INFO", f"Extracted {artifact.universe_id}.unx from database", artifact.universe_id)
+                except Exception as e:
+                    _log_event(db, "ERROR", f"Failed to extract {artifact.universe_id}: {e}", artifact.universe_id)
+
+            _log_event(db, "INFO", f"Extracted {len(source_artifacts)} source files from database")
+
         # STAGE 1: Parser
         runs.update_stage_status(run_id, "parser", "running")
         _log_event(db, "INFO", f"Starting parser stage for run {run_id}")

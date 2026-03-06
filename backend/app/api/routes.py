@@ -156,7 +156,7 @@ async def get_events(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.post("/upload")
 async def upload_universe(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Upload .unv or .unx files directly to ~/pipeline/input/"""
+    """Upload .unv or .unx files - store in Neon database"""
 
     if not (file.filename.endswith('.unv') or file.filename.endswith('.unx')):
         raise HTTPException(
@@ -164,16 +164,13 @@ async def upload_universe(file: UploadFile = File(...), db: Session = Depends(ge
             detail="Only .unv and .unx files are allowed"
         )
 
-    INPUT_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = INPUT_DIR / file.filename
-
+    # Read file content into memory
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        file_content = await file.read()
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to save file: {str(e)}"
+            detail=f"Failed to read file: {str(e)}"
         )
 
     # Extract universe ID from filename (remove .unv or .unx extension)
@@ -191,21 +188,37 @@ async def upload_universe(file: UploadFile = File(...), db: Session = Depends(ge
         db.add(new_universe)
         db.commit()
 
-        # Log event
-        event = Event(
-            level="INFO",
-            message=f"Universe file uploaded: {file.filename}",
-            universe_id=universe_id
+    # Store file as artifact in database
+    try:
+        artifact = ArtifactStorage.save_binary_artifact(
+            db=db,
+            universe_id=universe_id,
+            artifact_type=ArtifactStorage.TYPE_SOURCE_UNX,
+            binary_content=file_content
         )
-        db.add(event)
-        db.commit()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save artifact: {str(e)}"
+        )
+
+    # Log event
+    event = Event(
+        level="INFO",
+        message=f"Universe file uploaded to database: {file.filename} ({len(file_content)} bytes)",
+        universe_id=universe_id
+    )
+    db.add(event)
+    db.commit()
 
     return {
         "status": "success",
         "filename": file.filename,
-        "path": str(file_path),
-        "universe_id": universe_id
+        "storage": "database",
+        "universe_id": universe_id,
+        "file_size": len(file_content)
     }
+
 
 
 @router.post("/upload/metadata")
