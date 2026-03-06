@@ -212,6 +212,7 @@ def run_pipeline() -> Dict[str, Any]:
 
             # Get all parsed universes from database that haven't been transformed OR lack artifacts
             universes_to_transform = db.query(Universe).filter(Universe.parsed == True).all()
+            _log_event(db, "INFO", f"Found {len(universes_to_transform)} parsed universes")
 
             # For each universe, check if it needs transformation
             universes_needing_transform = []
