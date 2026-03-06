@@ -169,8 +169,35 @@ async def list_universes(db: Session = Depends(get_db)):
         "parsed": u.parsed,
         "transformed": u.transformed,
         "validated": u.validated,
-        "validated_at": u.validated_at.isoformat() if u.validated_at else None
+        "validated_at": u.validated_at.isoformat() if u.validated_at else None,
+        "ai_enhanced": u.ai_enhanced,
+        "ai_enhancements": u.ai_enhancements,
+        "ai_enhancement_summary": u.ai_enhancement_summary,
+        "ai_processed_at": u.ai_processed_at.isoformat() if u.ai_processed_at else None
     } for u in universes_db]
+
+
+@router.get("/universes/{universe_id}")
+async def get_universe(universe_id: str, db: Session = Depends(get_db)):
+    """Get detailed information about a specific universe"""
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+
+    if not universe:
+        raise HTTPException(status_code=404, detail=f"Universe not found: {universe_id}")
+
+    return {
+        "id": universe.id,
+        "parsed": universe.parsed,
+        "transformed": universe.transformed,
+        "validated": universe.validated,
+        "validated_at": universe.validated_at.isoformat() if universe.validated_at else None,
+        "ai_enhanced": universe.ai_enhanced,
+        "ai_enhancements": universe.ai_enhancements,
+        "ai_enhancement_summary": universe.ai_enhancement_summary,
+        "ai_processed_at": universe.ai_processed_at.isoformat() if universe.ai_processed_at else None,
+        "created_at": universe.created_at.isoformat() if universe.created_at else None,
+        "updated_at": universe.updated_at.isoformat() if universe.updated_at else None
+    }
 
 
 @router.get("/kpis")
