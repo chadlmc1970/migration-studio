@@ -721,6 +721,32 @@ async def delete_universe(universe_id: str, db: Session = Depends(get_db)):
     }
 
 
+@router.post("/debug/fix-parsed-flags")
+async def fix_parsed_flags(db: Session = Depends(get_db)):
+    """Emergency fix: set parsed=True for universes with CIM artifacts"""
+    from app.models.database import Artifact
+
+    # Find all universes with CIM artifacts
+    cim_artifacts = db.query(Artifact).filter(
+        Artifact.artifact_type == ArtifactStorage.TYPE_CIM
+    ).all()
+
+    fixed = []
+    for artifact in cim_artifacts:
+        universe = db.query(Universe).filter(Universe.id == artifact.universe_id).first()
+        if universe and not universe.parsed:
+            universe.parsed = True
+            fixed.append(artifact.universe_id)
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "fixed": fixed,
+        "count": len(fixed)
+    }
+
+
 @router.post("/universes/{universe_id}/reprocess")
 async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     """Reset universe state and reprocess through pipeline"""
