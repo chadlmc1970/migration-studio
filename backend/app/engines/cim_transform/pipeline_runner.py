@@ -87,6 +87,7 @@ class PipelineRunner:
         print("📥 Loading CIM...")
         cim = load_cim(cim_file)
         print(f"✓ Loaded universe: {cim.universe.name} (id: {cim.universe.id})")
+        print(f"   CIMModel loaded: {len(cim.dimensions)} dimensions, {len(cim.measures)} measures")
 
         # === AI SEMANTIC ENHANCEMENT ===
         ai_enhancements_data = None
@@ -100,7 +101,9 @@ class PipelineRunner:
 
                 # Convert CIM to dict for enhancement
                 cim_dict = cim.model_dump() if hasattr(cim, 'model_dump') else cim.dict()
-                print(f"   CIM dict prepared, dimensions={len(cim_dict.get('business_layer', {}).get('dimensions', []))}")
+                # CIMModel has flat dimensions, not nested in business_layer
+                dim_count = len(cim_dict.get('dimensions', []))
+                print(f"   CIM dict prepared, dimensions={dim_count}")
                 enhanced_dict = enhancer.enhance_cim(cim_dict)
                 print(f"   AI enhancement method called, result type={type(enhanced_dict)}")
 

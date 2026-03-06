@@ -85,8 +85,11 @@ class SemanticEnhancer:
 
     def _enhance_dimensions(self, cim: Dict[str, Any]):
         """Classify all dimensions with semantic types."""
-        business_layer = cim.get("business_layer", {})
-        dimensions = business_layer.get("dimensions", [])
+        # Support both CIMModel (flat dimensions) and CanonicalModel (nested business_layer)
+        dimensions = cim.get("dimensions", []) or cim.get("business_layer", {}).get("dimensions", [])
+
+        logger.info(f"📊 DEBUG: CIM keys: {list(cim.keys())}")
+        logger.info(f"📊 DEBUG: Found {len(dimensions)} dimensions to classify")
 
         if not dimensions:
             logger.info("No dimensions to classify")
@@ -131,8 +134,8 @@ class SemanticEnhancer:
 
     def _detect_hierarchies(self, cim: Dict[str, Any]):
         """Detect dimensional hierarchies."""
-        business_layer = cim.get("business_layer", {})
-        dimensions = business_layer.get("dimensions", [])
+        # Support both CIMModel (flat dimensions) and CanonicalModel (nested business_layer)
+        dimensions = cim.get("dimensions", []) or cim.get("business_layer", {}).get("dimensions", [])
 
         if not dimensions:
             return
@@ -171,7 +174,11 @@ class SemanticEnhancer:
 
     def _translate_formulas(self, cim: Dict[str, Any]):
         """Translate BOBJ formulas to target system syntax."""
-        business_layer = cim.get("business_layer", {})
+        # Support both CIMModel and CanonicalModel structures
+        dimensions = cim.get("dimensions", []) or cim.get("business_layer", {}).get("dimensions", [])
+        measures = cim.get("measures", []) or cim.get("business_layer", {}).get("measures", [])
+        joins = cim.get("joins", []) or cim.get("data_foundation", {}).get("joins", [])
+
         metadata = cim.get("metadata", {})
 
         # Check for formulas in metadata
@@ -185,9 +192,9 @@ class SemanticEnhancer:
         logger.info(f"Translating {len(formulas)} formulas...")
 
         translation_context = {
-            "dimensions": business_layer.get("dimensions", []),
-            "measures": business_layer.get("measures", []),
-            "joins": cim.get("data_foundation", {}).get("joins", [])
+            "dimensions": dimensions,
+            "measures": measures,
+            "joins": joins
         }
 
         for formula_def in formulas:
