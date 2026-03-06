@@ -244,8 +244,10 @@ def run_pipeline() -> Dict[str, Any]:
             if universes_needing_transform:
                 _log_event(db, "INFO", f"Universes needing transformation: {', '.join(universes_needing_transform)}")
 
+            # Run transform with force=True if we have universes to transform
+            force_transform = len(universes_needing_transform) > 0
             transform_runner = PipelineRunner(PIPELINE_ROOT)
-            transform_results = transform_runner.run(force=False)
+            transform_results = transform_runner.run(force=force_transform)
 
             # Update database with transformed universes
             for result in transform_results:
