@@ -152,9 +152,26 @@ def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLo
 
             # Extract BusinessLayer - Dimensions and Measures
             business_layer = root.find(f'.//{ns}BusinessLayer') or root.find('.//BusinessLayer')
+
+            # DEBUG: Log what we're finding
+            logger.log(f"  Root tag: {root.tag}")
+            logger.log(f"  Namespace: '{ns}' (len={len(ns)})")
+            logger.log(f"  BusinessLayer found: {business_layer is not None}")
+
             if business_layer:
+                # Try multiple ways to find dimensions
+                dims1 = business_layer.findall(f'.//{ns}Dimension')
+                dims2 = business_layer.findall('.//Dimension')
+                dims3 = root.findall('.//*[@class="Dimension"]')
+                dims4 = root.findall('.//*[local-name()="Dimension"]')
+
+                logger.log(f"  Dimension search: ns={len(dims1 or [])}, no-ns={len(dims2 or [])}, class={len(dims3 or [])}, local-name={len(dims4 or [])}")
+
+                # Use whichever found dimensions
+                dimensions_list = dims1 or dims2 or dims3 or dims4 or []
+
                 # Extract Dimensions
-                for dimension in business_layer.findall(f'.//{ns}Dimension') or business_layer.findall('.//Dimension'):
+                for dimension in dimensions_list:
                     dim_name = dimension.get('name', 'Unknown')
 
                     # Extract expression to get table.column
