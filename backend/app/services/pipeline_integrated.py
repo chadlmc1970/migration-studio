@@ -226,18 +226,13 @@ def run_pipeline() -> Dict[str, Any]:
                     not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_SAC_MODEL)
                 )
 
-                if needs_transform:
-                    # Restore CIM file from database to filesystem (if it exists in DB)
-                    cim_content = ArtifactStorage.get_artifact_content(db, universe.id, ArtifactStorage.TYPE_CIM)
-                    if cim_content:
-                        cim_file = cim_dir / f"{universe.id}.cim.json"
-                        with open(cim_file, 'w') as f:
-                            f.write(cim_content)
-                        _log_event(db, "INFO", f"Restored CIM file for {universe.id} from database", universe.id)
+                _log_event(db, "INFO", f"Universe {universe.id}: transformed={universe.transformed}, ai_enhanced={universe.ai_enhanced}, needs={needs_transform}", universe.id)
 
+                if needs_transform:
+                    # CIM files already extracted in STAGE 0, no need to extract again
+                    universes_needing_transform.append(universe.id)
                     # Force transformed flag to False so pipeline will process it
                     universe.transformed = False
-                    universes_needing_transform.append(universe.id)
 
             db.commit()
 
