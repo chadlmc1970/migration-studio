@@ -25,6 +25,18 @@ async def api_health():
     return {"status": "healthy", "message": "API routes ready"}
 
 
+@router.get("/debug/input-files")
+async def debug_input_files():
+    """Debug endpoint to list files in INPUT_DIR"""
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    files = list(INPUT_DIR.glob("*"))
+    return {
+        "input_dir": str(INPUT_DIR),
+        "files": [{"name": f.name, "size": f.stat().st_size, "is_file": f.is_file()} for f in files],
+        "count": len(files)
+    }
+
+
 @router.get("/ai-status")
 async def ai_status():
     """Diagnostic endpoint to check AI configuration"""
