@@ -729,8 +729,8 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     if not universe:
         raise HTTPException(status_code=404, detail=f"Universe not found: {universe_id}")
 
-    # Reset universe state
-    universe.parsed = False
+    # Reset universe state (keep parsed=True and CIM artifacts for transform reprocessing)
+    # universe.parsed = False  # Keep True so transform can run
     universe.transformed = False
     universe.validated = False
     universe.validated_at = None
@@ -739,8 +739,11 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
     universe.ai_processed_at = None
     universe.ai_enhancement_summary = None
 
-    # Delete all artifacts from database
-    db.query(Artifact).filter(Artifact.universe_id == universe_id).delete()
+    # Delete transform/validation artifacts but keep CIM
+    for artifact_type in [ArtifactStorage.TYPE_SAC_MODEL, ArtifactStorage.TYPE_DATASPHERE_VIEWS,
+                          ArtifactStorage.TYPE_HANA_SCHEMA, ArtifactStorage.TYPE_LINEAGE_DOT,
+                          ArtifactStorage.TYPE_COVERAGE_REPORT, ArtifactStorage.TYPE_SEMANTIC_DIFF]:
+        ArtifactStorage.delete_artifact(db, universe_id, artifact_type)
 
     db.commit()
 
