@@ -83,6 +83,9 @@ def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLo
     """
     Discover universe structure from extracted XML files.
     Parses BOBJ universe XML to extract tables, joins, dimensions, and measures.
+
+    NOTE: Binary .blx/.dfx files require SAP BusinessObjects authoring SDK for full parsing.
+    This function attempts XML parsing first, then falls back to metadata extraction.
     """
     logger.log("Parsing universe XML structure...")
 
@@ -90,6 +93,8 @@ def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLo
     xml_files = list(raw_dir.rglob("*.xml"))
     if not xml_files:
         logger.warn("No XML files found in universe archive")
+        # Try to extract metadata from binary files
+        _extract_from_binary_metadata(raw_dir, cim, logger)
         return
 
     logger.log(f"Found {len(xml_files)} XML file(s)")
@@ -273,3 +278,54 @@ def _discover_structure(raw_dir: Path, cim: CanonicalModel, logger: ConversionLo
     logger.log(f"  Dimensions: {len(cim.business_layer.dimensions)}")
     logger.log(f"  Measures: {len(cim.business_layer.measures)}")
     logger.log(f"  Filters: {len(cim.business_layer.filters)}")
+
+
+def _extract_from_binary_metadata(raw_dir: Path, cim: CanonicalModel, logger: ConversionLogger) -> None:
+    """
+    Extract limited metadata from binary .blx/.dfx files.
+
+    Binary BOBJ universe files (.blx, .dfx) use proprietary format that requires
+    SAP BusinessObjects authoring SDK for full parsing. This function extracts
+    what metadata is available from Properties files and generates a warning.
+    """
+    logger.warn("Binary .blx/.dfx files detected - full parsing requires SAP BusinessObjects authoring SDK")
+
+    # Look for Properties file to get universe description
+    props_file = raw_dir / "Properties"
+    if props_file.exists():
+        try:
+            import subprocess
+            # Extract strings from binary Properties file
+            result = subprocess.run(
+                ["strings", str(props_file)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode == 0:
+                lines = result.stdout.split('\n')
+                # Look for description
+                for i, line in enumerate(lines):
+                    if "UNIVERSE_DESCRIPTION" in line and i + 1 < len(lines):
+                        desc = lines[i + 1]
+                        logger.log(f"Universe description: {desc[:100]}")
+                        break
+
+        except Exception as e:
+            logger.warn(f"Could not extract metadata from Properties: {e}")
+
+    # Check if .blx and .dfx files are nested zips
+    blx_files = list(raw_dir.rglob("*.blx"))
+    dfx_files = list(raw_dir.rglob("*.dfx"))
+
+    logger.log(f"Found {len(blx_files)} .blx file(s) and {len(dfx_files)} .dfx file(s)")
+    logger.log("These files use proprietary binary format - cannot parse without authoring SDK")
+    logger.log("")
+    logger.log("To enable full parsing:")
+    logger.log("  1. Install SAP BusinessObjects SDK with authoring components")
+    logger.log("  2. Use the Java bridge in app/engines/bobj2sac/java_bridge/")
+    logger.log("  3. Or export universe as XML from Information Design Tool")
+    logger.log("")
+    logger.warn("Proceeding with empty structure - manual intervention required")
+
