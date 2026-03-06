@@ -656,9 +656,11 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
 
     # Delete generated files to force regeneration
     import shutil
+    import json
     cim_file = Path.home() / "pipeline" / "cim" / f"{universe_id}.cim.json"
     targets_dir = Path.home() / "pipeline" / "targets" / universe_id
     validation_dir = Path.home() / "pipeline" / "validation" / universe_id
+    state_file = Path.home() / "pipeline" / "state" / "pipeline_state.json"
 
     if cim_file.exists():
         cim_file.unlink()
@@ -666,6 +668,15 @@ async def reprocess_universe(universe_id: str, db: Session = Depends(get_db)):
         shutil.rmtree(targets_dir)
     if validation_dir.exists():
         shutil.rmtree(validation_dir)
+
+    # Update state file to mark as not transformed
+    if state_file.exists():
+        with open(state_file, 'r') as f:
+            state_data = json.load(f)
+        if universe_id in state_data.get("universes", {}):
+            state_data["universes"][universe_id]["transformed"] = False
+            with open(state_file, 'w') as f:
+                json.dump(state_data, f, indent=2)
 
     return {"status": "success", "message": f"Universe {universe_id} reset. Run pipeline to reprocess."}
 
