@@ -37,6 +37,71 @@ async def debug_input_files():
     }
 
 
+@router.post("/migrate-files")
+async def migrate_files_to_neon(db: Session = Depends(get_db)):
+    """Migrate existing .unx files from filesystem to Neon database"""
+    import base64
+
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    unx_files = list(INPUT_DIR.glob("*.unx"))
+
+    if not unx_files:
+        return {
+            "status": "success",
+            "message": "No .unx files found to migrate",
+            "migrated": 0
+        }
+
+    migrated = []
+    failed = []
+
+    for unx_file in unx_files:
+        universe_id = unx_file.stem
+
+        try:
+            # Read file
+            with open(unx_file, 'rb') as f:
+                file_content = f.read()
+
+            # Ensure universe exists
+            universe = db.query(Universe).filter(Universe.id == universe_id).first()
+            if not universe:
+                universe = Universe(
+                    id=universe_id,
+                    parsed=False,
+                    transformed=False,
+                    validated=False
+                )
+                db.add(universe)
+                db.commit()
+
+            # Save as artifact
+            ArtifactStorage.save_binary_artifact(
+                db=db,
+                universe_id=universe_id,
+                artifact_type=ArtifactStorage.TYPE_SOURCE_UNX,
+                binary_content=file_content
+            )
+
+            migrated.append({
+                "universe_id": universe_id,
+                "file_size": len(file_content)
+            })
+
+        except Exception as e:
+            failed.append({
+                "universe_id": universe_id,
+                "error": str(e)
+            })
+
+    return {
+        "status": "success",
+        "message": f"Migrated {len(migrated)} files",
+        "migrated": migrated,
+        "failed": failed
+    }
+
+
 @router.get("/ai-status")
 async def ai_status():
     """Diagnostic endpoint to check AI configuration"""
