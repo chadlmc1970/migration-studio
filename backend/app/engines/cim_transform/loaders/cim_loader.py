@@ -50,7 +50,28 @@ def load_cim(file_path: Path) -> CIMModel:
     """Load and parse a CIM JSON file"""
     with open(file_path, 'r') as f:
         data = json.load(f)
-    return CIMModel(**data)
+
+    # Handle both old CIMModel format and new CanonicalModel format
+    if 'business_layer' in data:
+        # New CanonicalModel format from parser
+        bl = data.get('business_layer', {})
+        df = data.get('data_foundation', {})
+
+        # Convert to CIMModel format
+        return CIMModel(
+            schema_version=data.get('schema_version', '0.1'),
+            universe=CIMUniverse(
+                name=data.get('universe_name', ''),
+                id=data.get('universe_id', '')
+            ),
+            tables=[CIMTable(name=t) for t in df.get('tables', [])],
+            joins=[CIMJoin(**j) for j in df.get('joins', [])],
+            dimensions=[CIMDimension(**d) for d in bl.get('dimensions', [])],
+            measures=[CIMMeasure(**m) for m in bl.get('measures', [])]
+        )
+    else:
+        # Old CIMModel format
+        return CIMModel(**data)
 
 
 def scan_cim_directory(cim_dir: Path) -> list[Path]:
