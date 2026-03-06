@@ -219,11 +219,11 @@ def run_pipeline() -> Dict[str, Any]:
             cim_dir.mkdir(parents=True, exist_ok=True)
 
             for universe in universes_to_transform:
-                # Check if universe lacks artifacts in database
+                # Check if universe needs transformation or AI enhancement
                 needs_transform = (
                     not universe.transformed or
-                    not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_SAC_MODEL) or
-                    not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_CIM)
+                    not universe.ai_enhanced or  # Reprocess if AI enhancements missing
+                    not ArtifactStorage.artifact_exists(db, universe.id, ArtifactStorage.TYPE_SAC_MODEL)
                 )
 
                 if needs_transform:
